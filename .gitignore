@@ -1,0 +1,41 @@
+# Terraform
+**/.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+!example.tfvars
+.terraform.lock.hcl.bak
+crash.log
+
+# Helm
+**/charts/
+**/Chart.lock
+
+# Kubernetes
+kubeconfig
+*-kubeconfig
+*.kubeconfig
+
+# Editor / OS
+.vscode/
+.idea/
+.DS_Store
+*.swp
+*.swo
+
+# Logs
+*.log
+logs/
+
+# Secrets — should NEVER be committed
+.env
+.env.*
+!.env.example
+secrets/
+*-secret.yaml
+*-secrets.yaml
+
+# Build artifacts
+dist/
+build/
+node_modules/
