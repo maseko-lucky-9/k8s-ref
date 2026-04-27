@@ -1,0 +1,9 @@
+{{- if .Values.eso.enabled }}
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ .Values.eso.sourceNamespace }}
+  labels:
+    {{- include "k8s-ref-demo.labels" . | nindent 4 }}
+    app.kubernetes.io/component: eso-source
+{{- end }}

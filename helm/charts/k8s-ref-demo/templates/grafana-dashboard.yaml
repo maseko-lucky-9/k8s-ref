@@ -1,0 +1,169 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: k8s-ref-demo-dashboard
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "k8s-ref-demo.labels" . | nindent 4 }}
+    grafana_dashboard: "1"
+data:
+  k8s-ref-demo.json: |
+    {
+      "uid": "k8s-ref-demo-v1",
+      "title": "K8s Ref Demo — Tenant Workloads",
+      "tags": ["k8s-ref", "multi-tenant"],
+      "timezone": "browser",
+      "schemaVersion": 38,
+      "refresh": "30s",
+      "time": { "from": "now-1h", "to": "now" },
+      "templating": {
+        "list": [
+          {
+            "name": "tenant",
+            "type": "query",
+            "datasource": { "type": "prometheus", "uid": "${datasource}" },
+            "query": "label_values(kube_pod_info{namespace=\"{{ .Values.namespace }}\"},pod)",
+            "label": "Tenant Pod",
+            "multi": true,
+            "includeAll": true,
+            "current": { "text": "All", "value": "$__all" }
+          },
+          {
+            "name": "datasource",
+            "type": "datasource",
+            "pluginId": "prometheus",
+            "label": "Datasource",
+            "current": {}
+          }
+        ]
+      },
+      "panels": [
+        {
+          "id": 1,
+          "title": "HTTP Request Rate (req/s)",
+          "type": "timeseries",
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "reqps",
+              "custom": { "lineWidth": 2 }
+            }
+          },
+          "targets": [
+            {
+              "expr": "sum by (pod) (rate(http_request_duration_seconds_count{namespace=\"{{ .Values.namespace }}\"}[2m]))",
+              "legendFormat": "{{ "{{pod}}" }}",
+              "refId": "A"
+            }
+          ]
+        },
+        {
+          "id": 2,
+          "title": "HTTP Error Rate (5xx/s)",
+          "type": "timeseries",
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "reqps",
+              "color": { "fixedColor": "red", "mode": "fixed" },
+              "custom": { "lineWidth": 2 }
+            }
+          },
+          "targets": [
+            {
+              "expr": "sum by (pod) (rate(http_request_duration_seconds_count{namespace=\"{{ .Values.namespace }}\",status_code=~\"5..\"}[2m]))",
+              "legendFormat": "{{ "{{pod}}" }}",
+              "refId": "A"
+            }
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Pod CPU Usage (millicores)",
+          "type": "timeseries",
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "none",
+              "custom": { "lineWidth": 2 }
+            }
+          },
+          "targets": [
+            {
+              "expr": "sum by (pod) (rate(container_cpu_usage_seconds_total{namespace=\"{{ .Values.namespace }}\",container!=\"\",container!=\"POD\"}[2m])) * 1000",
+              "legendFormat": "{{ "{{pod}}" }}",
+              "refId": "A"
+            }
+          ]
+        },
+        {
+          "id": 4,
+          "title": "Pod Memory (MiB)",
+          "type": "timeseries",
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "mebibytes",
+              "custom": { "lineWidth": 2 }
+            }
+          },
+          "targets": [
+            {
+              "expr": "sum by (pod) (container_memory_working_set_bytes{namespace=\"{{ .Values.namespace }}\",container!=\"\",container!=\"POD\"}) / 1024 / 1024",
+              "legendFormat": "{{ "{{pod}}" }}",
+              "refId": "A"
+            }
+          ]
+        },
+        {
+          "id": 5,
+          "title": "Active Goroutines",
+          "type": "timeseries",
+          "gridPos": { "h": 6, "w": 12, "x": 0, "y": 16 },
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "none",
+              "custom": { "lineWidth": 2 }
+            }
+          },
+          "targets": [
+            {
+              "expr": "go_goroutines{namespace=\"{{ .Values.namespace }}\"}",
+              "legendFormat": "{{ "{{pod}}" }}",
+              "refId": "A"
+            }
+          ]
+        },
+        {
+          "id": 6,
+          "title": "Pod Replicas",
+          "type": "stat",
+          "gridPos": { "h": 6, "w": 12, "x": 12, "y": 16 },
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "none",
+              "thresholds": {
+                "steps": [
+                  { "color": "red", "value": 0 },
+                  { "color": "yellow", "value": 1 },
+                  { "color": "green", "value": 2 }
+                ]
+              }
+            }
+          },
+          "targets": [
+            {
+              "expr": "count by (pod) (kube_pod_status_ready{namespace=\"{{ .Values.namespace }}\",condition=\"true\"})",
+              "legendFormat": "{{ "{{pod}}" }}",
+              "refId": "A"
+            }
+          ]
+        }
+      ]
+    }

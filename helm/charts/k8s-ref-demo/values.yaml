@@ -34,3 +34,8 @@ serviceMonitor:
   enabled: true
   interval: 30s
   path: /metrics
+
+eso:
+  enabled: true
+  sourceNamespace: k8s-ref-secrets
+  serviceAccountName: eso-reader
