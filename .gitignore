@@ -36,6 +36,9 @@ logs/
 secrets/
 *-secret.yaml
 *-secrets.yaml
+# Helm templates that contain "secret" in the name are NOT real secrets — allow them
+!helm/**/templates/**/*-secret.yaml
+!helm/**/templates/**/*-secrets.yaml
 
 # Build artifacts
 dist/
