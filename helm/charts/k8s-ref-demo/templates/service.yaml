@@ -19,6 +19,6 @@ spec:
       protocol: TCP
     - name: metrics
       port: 9797
-      targetPort: metrics
+      targetPort: http
       protocol: TCP
 {{- end }}
