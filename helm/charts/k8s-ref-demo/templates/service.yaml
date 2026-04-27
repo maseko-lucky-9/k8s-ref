@@ -8,6 +8,7 @@ metadata:
   labels:
     {{- include "k8s-ref-demo.labels" $ | nindent 4 }}
     app.kubernetes.io/component: {{ .name }}
+    app: {{ .name }}
 spec:
   selector:
     app: {{ .name }}
