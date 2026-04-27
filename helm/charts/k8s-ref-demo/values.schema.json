@@ -49,7 +49,6 @@
       "type": "object",
       "properties": {
         "enabled": { "type": "boolean" },
-        "sourceNamespace": { "type": "string" },
         "serviceAccountName": { "type": "string" }
       }
     }

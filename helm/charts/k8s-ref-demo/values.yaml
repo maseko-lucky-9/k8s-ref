@@ -39,7 +39,6 @@ serviceMonitor:
 
 eso:
   enabled: true
-  sourceNamespace: k8s-ref-secrets
   serviceAccountName: eso-reader
 
 # Cloudflare Tunnel — disabled until tunnel credentials secret is provisioned.
