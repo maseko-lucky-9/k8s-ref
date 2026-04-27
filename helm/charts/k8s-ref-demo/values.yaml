@@ -8,11 +8,13 @@ ingressClass: public
 tenants:
   - name: tenant-a
     host: k8s-ref-a.homelab.local
+    publicHost: k8s-ref-a.prudentiadigital.co.za
     replicas: 2
     message: "Tenant A — K8s reference demo"
     color: "4B8BBE"
   - name: tenant-b
     host: k8s-ref-b.homelab.local
+    publicHost: k8s-ref-b.prudentiadigital.co.za
     replicas: 1
     message: "Tenant B — K8s reference demo"
     color: "7C3AED"
@@ -39,3 +41,15 @@ eso:
   enabled: true
   sourceNamespace: k8s-ref-secrets
   serviceAccountName: eso-reader
+
+# Cloudflare Tunnel — disabled until tunnel credentials secret is provisioned.
+# To enable:
+#   1. Create tunnel: cloudflared tunnel create k8s-ref (via Cloudflare Zero Trust dashboard or CLI)
+#   2. kubectl create secret generic cloudflared-tunnel-creds \
+#        --from-file=credentials.json=<path-to-creds.json> -n k8s-ref-demo
+#   3. Set cloudflared.enabled=true and cloudflared.tunnelId=<uuid> in ArgoCD app values
+cloudflared:
+  enabled: false
+  tunnelId: ""
+  imageTag: "2025.4.0"
+  credentialsSecret: cloudflared-tunnel-creds

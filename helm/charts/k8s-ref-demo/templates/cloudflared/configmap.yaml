@@ -1,0 +1,22 @@
+{{- if .Values.cloudflared.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cloudflared-config
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "k8s-ref-demo.labels" . | nindent 4 }}
+    app.kubernetes.io/component: cloudflared
+data:
+  config.yaml: |
+    tunnel: {{ .Values.cloudflared.tunnelId }}
+    credentials-file: /etc/cloudflared/creds/credentials.json
+    metrics: 0.0.0.0:2000
+    no-autoupdate: true
+    ingress:
+      {{- range .Values.tenants }}
+      - hostname: {{ .publicHost }}
+        service: http://{{ .name }}.{{ $.Values.namespace }}.svc.cluster.local
+      {{- end }}
+      - service: http_status:404
+{{- end }}
