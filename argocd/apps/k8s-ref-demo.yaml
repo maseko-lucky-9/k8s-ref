@@ -17,6 +17,18 @@ spec:
   destination:
     server: https://kubernetes.default.svc
     namespace: k8s-ref-demo
+  # ESO writes status + conditions back to ExternalSecret after reconcile.
+  # Ignore all fields managed by the external-secrets controller plus the
+  # force-sync annotation. managedFieldsManagers covers whatever ESO adds
+  # regardless of path, so this is robust against ESO version changes.
+  ignoreDifferences:
+    - group: external-secrets.io
+      kind: ExternalSecret
+      managedFieldsManagers:
+        - external-secrets
+      jsonPointers:
+        - /status
+        - /metadata/annotations/force-sync
   syncPolicy:
     automated:
       prune: false
@@ -24,3 +36,4 @@ spec:
     syncOptions:
       - CreateNamespace=true
       - ServerSideApply=true
+      - RespectIgnoreDifferences=true
