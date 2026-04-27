@@ -1,0 +1,49 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "required": ["namespace", "clusterIssuer", "ingressClass", "tenants", "image", "resources"],
+  "properties": {
+    "namespace": { "type": "string" },
+    "clusterIssuer": { "type": "string" },
+    "ingressClass": { "type": "string" },
+    "tenants": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["name", "host", "replicas"],
+        "properties": {
+          "name": { "type": "string" },
+          "host": { "type": "string" },
+          "replicas": { "type": "integer", "minimum": 1 },
+          "message": { "type": "string" },
+          "color": { "type": "string" }
+        }
+      }
+    },
+    "image": {
+      "type": "object",
+      "required": ["repository", "tag"],
+      "properties": {
+        "repository": { "type": "string" },
+        "tag": { "type": "string" },
+        "pullPolicy": { "type": "string", "enum": ["Always", "IfNotPresent", "Never"] }
+      }
+    },
+    "resources": {
+      "type": "object",
+      "properties": {
+        "requests": { "type": "object" },
+        "limits": { "type": "object" }
+      }
+    },
+    "serviceMonitor": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "interval": { "type": "string" },
+        "path": { "type": "string" }
+      }
+    }
+  }
+}

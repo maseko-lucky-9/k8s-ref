@@ -1,0 +1,36 @@
+# yaml-language-server: $schema=values.schema.json
+
+namespace: k8s-ref-demo
+
+clusterIssuer: homelab-ca
+ingressClass: public
+
+tenants:
+  - name: tenant-a
+    host: k8s-ref-a.homelab.local
+    replicas: 2
+    message: "Tenant A — K8s reference demo"
+    color: "4B8BBE"
+  - name: tenant-b
+    host: k8s-ref-b.homelab.local
+    replicas: 1
+    message: "Tenant B — K8s reference demo"
+    color: "7C3AED"
+
+image:
+  repository: stefanprodan/podinfo
+  tag: "6.7.0"
+  pullPolicy: IfNotPresent
+
+resources:
+  requests:
+    cpu: 10m
+    memory: 32Mi
+  limits:
+    cpu: 200m
+    memory: 128Mi
+
+serviceMonitor:
+  enabled: true
+  interval: 30s
+  path: /metrics

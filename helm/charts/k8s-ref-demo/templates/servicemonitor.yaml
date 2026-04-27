@@ -1,0 +1,21 @@
+{{- if .Values.serviceMonitor.enabled }}
+{{- range .Values.tenants }}
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ .name }}
+  namespace: {{ $.Values.namespace }}
+  labels:
+    {{- include "k8s-ref-demo.labels" $ | nindent 4 }}
+    app.kubernetes.io/component: {{ .name }}
+spec:
+  selector:
+    matchLabels:
+      app: {{ .name }}
+  endpoints:
+    - port: metrics
+      path: {{ $.Values.serviceMonitor.path }}
+      interval: {{ $.Values.serviceMonitor.interval }}
+{{- end }}
+{{- end }}

@@ -1,0 +1,30 @@
+{{- range .Values.tenants }}
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ .name }}
+  namespace: {{ $.Values.namespace }}
+  labels:
+    {{- include "k8s-ref-demo.labels" $ | nindent 4 }}
+  annotations:
+    cert-manager.io/cluster-issuer: {{ $.Values.clusterIssuer }}
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+spec:
+  ingressClassName: {{ $.Values.ingressClass }}
+  rules:
+    - host: {{ .host }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ .name }}
+                port:
+                  name: http
+  tls:
+    - hosts:
+        - {{ .host }}
+      secretName: homelab-tls-{{ .name }}
+{{- end }}

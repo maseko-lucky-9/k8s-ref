@@ -1,0 +1,16 @@
+K8s Reference Demo deployed successfully!
+
+Tenants:
+{{- range .Values.tenants }}
+  - {{ .name }}: https://{{ .host }}
+{{- end }}
+
+Wait ~30s for cert-manager to issue TLS certificates, then access via LAN.
+
+Check status:
+  kubectl get pods -n {{ .Values.namespace }}
+  kubectl get ingress -n {{ .Values.namespace }}
+  kubectl get certificate -n {{ .Values.namespace }}
+
+Run smoke tests:
+  helm test {{ .Release.Name }} -n {{ .Release.Namespace }}

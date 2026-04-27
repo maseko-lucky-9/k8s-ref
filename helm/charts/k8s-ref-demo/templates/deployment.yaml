@@ -1,0 +1,53 @@
+{{- range .Values.tenants }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .name }}
+  namespace: {{ $.Values.namespace }}
+  labels:
+    {{- include "k8s-ref-demo.labels" $ | nindent 4 }}
+    app.kubernetes.io/component: {{ .name }}
+spec:
+  replicas: {{ .replicas }}
+  selector:
+    matchLabels:
+      app: {{ .name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .name }}
+        {{- include "k8s-ref-demo.labels" $ | nindent 8 }}
+        app.kubernetes.io/component: {{ .name }}
+    spec:
+      containers:
+        - name: podinfo
+          image: "{{ $.Values.image.repository }}:{{ $.Values.image.tag }}"
+          imagePullPolicy: {{ $.Values.image.pullPolicy }}
+          env:
+            - name: PODINFO_UI_COLOR
+              value: "#{{ .color }}"
+            - name: PODINFO_UI_MESSAGE
+              value: {{ .message | quote }}
+          ports:
+            - name: http
+              containerPort: 9898
+              protocol: TCP
+            - name: metrics
+              containerPort: 9797
+              protocol: TCP
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 15
+          resources:
+            {{- toYaml $.Values.resources | nindent 12 }}
+{{- end }}

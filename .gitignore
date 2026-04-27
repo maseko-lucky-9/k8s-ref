@@ -8,7 +8,9 @@
 crash.log
 
 # Helm
+# Ignore dependency downloads (helm dependency update output) but not authored charts
 **/charts/
+!helm/charts/
 **/Chart.lock
 
 # Kubernetes
