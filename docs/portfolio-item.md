@@ -47,10 +47,18 @@ Kubernetes · DevOps · Amazon Web Services · Terraform · Docker · Helm · Mi
 
 ## Upload checklist
 
-- [ ] Portfolio item created on Freelancer.com profile
-- [ ] Title pasted (check char limit in UI)
-- [ ] Description pasted
-- [ ] All 3 images uploaded; `architecture-diagram.png` set as cover
-- [ ] Skills tagged (copy from §Skills above)
-- [ ] GitHub repo URL added as project URL
-- [ ] Item visible on public profile
+- [x] Portfolio item created on Freelancer.com profile (`/portfolio-items/11362809-k8s-reference-architecture-gitops`)
+- [x] Title pasted
+- [x] Description pasted
+- [x] All 3 images uploaded; `architecture-diagram.png` set as cover
+- [x] Tags: kubernetes, devops, gitops, helm, argocd
+- [x] GitHub repo URL in description (`Repo: https://github.com/maseko-lucky-9/k8s-ref`) — Freelancer.com has no separate external URL field; description is the correct location
+- [x] Item visible on public profile (`freelancer.com/u/ThulaniMaseko`)
+
+## Pending additions (gated on M1 W2–W4 homelab screenshots)
+
+- [ ] P4 — `kubectl get pods,ingress,certificate -n k8s-ref-demo` (M1 W2)
+- [ ] P5 — ArgoCD UI Synced/Healthy tree (M1 W2)
+- [ ] P6 — Grafana golden-signals dashboard (M1 W3)
+- [ ] P7 — Cloudflare Tunnel public URL (M1 W3)
+- [ ] P8 — Populate metrics table in `docs/case-study/k8s-ref.md` (M1 W4)
