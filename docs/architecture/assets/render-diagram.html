@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>K8s Reference Architecture</title>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #0f172a;
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 40px 32px 48px;
+      min-height: 100vh;
+    }
+    .header {
+      text-align: center;
+      margin-bottom: 36px;
+    }
+    .title {
+      font-size: 22px;
+      font-weight: 700;
+      color: #f1f5f9;
+      letter-spacing: 0.02em;
+      margin-bottom: 8px;
+    }
+    .subtitle {
+      font-size: 13px;
+      color: #94a3b8;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+    .diagram-container {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 12px;
+      padding: 32px 40px;
+      width: 100%;
+      max-width: 1100px;
+    }
+    .mermaid {
+      display: flex;
+      justify-content: center;
+    }
+    .footer {
+      margin-top: 28px;
+      display: flex;
+      gap: 24px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    .badge {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 6px;
+      padding: 6px 14px;
+      font-size: 11px;
+      color: #94a3b8;
+      letter-spacing: 0.04em;
+    }
+    .badge span { color: #60a5fa; font-weight: 600; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="title">Production Kubernetes Reference Architecture</div>
+    <div class="subtitle">MicroK8s · ArgoCD · ESO · cert-manager · Prometheus · Grafana · Cloudflare Tunnel</div>
+  </div>
+
+  <div class="diagram-container">
+    <div class="mermaid">
+%%{init: {'theme': 'dark', 'themeVariables': {'primaryColor':'#1e3a5f','primaryTextColor':'#e2e8f0','primaryBorderColor':'#3b82f6','lineColor':'#60a5fa','secondaryColor':'#0f172a','tertiaryColor':'#162032','clusterBkg':'#0d1f35','titleColor':'#93c5fd','edgeLabelBackground':'#1e293b','fontFamily':'\'SF Mono\', monospace','fontSize':'13px'}}}%%
+graph TB
+    subgraph EXT["☁️  External"]
+        GH["🗂 GitHub\nk8s-ref repo\n(source of truth)"]
+        CF["🌐 Cloudflare\nEdge + Tunnel"]
+        INTERN["👤 Internet Clients"]
+    end
+
+    subgraph CLUSTER["🖥  MicroK8s · Single Node Homelab"]
+        subgraph GITOPS["GitOps Layer — ArgoCD"]
+            ARGO["ArgoCD\nApp-of-Apps\npattern"]
+        end
+
+        subgraph DEMO["k8s-ref-demo namespace"]
+            TA["tenant-a\n2 × podinfo\n/metrics + UI"]
+            TB["tenant-b\n1 × podinfo\n/metrics + UI"]
+            ES["ExternalSecret\ntenant-config"]
+            CFD["cloudflared\n2 × replicas\noutbound tunnel"]
+        end
+
+        subgraph OBS["observability namespace"]
+            PROM["Prometheus\nServiceMonitor scrape"]
+            GRAF["Grafana\nConfigMap dashboards"]
+            LOKI["Loki · Alloy\nlog aggregation"]
+            TEMPO["Tempo\ndistributed traces"]
+        end
+
+        subgraph SEC["external-secrets namespace"]
+            ESO["ESO\nClusterSecretStore\nKubernetes provider"]
+        end
+
+        subgraph INFRA["Cluster Infrastructure"]
+            ING["ingress-nginx\nTLS termination"]
+            CM["cert-manager\nhomelab-ca\nClusterIssuer"]
+        end
+    end
+
+    GH -->|"GitOps pull"| ARGO
+    ARGO -->|"sync"| TA & TB & ES & CFD
+    ARGO -->|"sync"| PROM & GRAF & LOKI & TEMPO
+    ARGO -->|"sync"| ESO & ING & CM
+
+    ESO -->|"reconcile secret"| ES
+    CM -->|"issue cert"| ING
+
+    TA & TB -->|"ServiceMonitor"| PROM
+    PROM & LOKI & TEMPO --> GRAF
+
+    TA & TB --> ING
+    ING --> CFD
+    CFD -->|"outbound"| CF
+    CF -->|"*.prudentiadigital.co.za"| INTERN
+    </div>
+  </div>
+
+  <div class="footer">
+    <div class="badge">Stack <span>MicroK8s 1.30</span></div>
+    <div class="badge">GitOps <span>ArgoCD App-of-Apps</span></div>
+    <div class="badge">Secrets <span>External Secrets Operator</span></div>
+    <div class="badge">TLS <span>cert-manager + Let's Encrypt</span></div>
+    <div class="badge">Tunnel <span>Cloudflare Zero-Trust</span></div>
+    <div class="badge">Observability <span>Prometheus · Grafana · Loki · Tempo</span></div>
+  </div>
+
+  <script>
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: 'dark',
+      securityLevel: 'loose',
+      graph: { htmlLabels: true }
+    });
+  </script>
+</body>
+</html>

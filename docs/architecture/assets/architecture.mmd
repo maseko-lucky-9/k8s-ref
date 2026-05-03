@@ -1,0 +1,65 @@
+%%{init: {'theme': 'dark', 'themeVariables': {'primaryColor':'#1e293b','primaryTextColor':'#e2e8f0','primaryBorderColor':'#3b82f6','lineColor':'#60a5fa','secondaryColor':'#0f172a','tertiaryColor':'#1e293b','background':'#0f172a','mainBkg':'#1e293b','nodeBorder':'#3b82f6','clusterBkg':'#0f172a','titleColor':'#e2e8f0','edgeLabelBackground':'#1e293b','fontFamily':'monospace'}}}%%
+graph TB
+    subgraph EXT["☁️  External"]
+        GH["🗂 GitHub\nk8s-ref repo\n(source of truth)"]
+        CF["🌐 Cloudflare\nEdge + Tunnel"]
+        INTERN["👤 Internet\nClients"]
+    end
+
+    subgraph CLUSTER["🖥  MicroK8s — Single Node (homelab)"]
+        subgraph GITOPS["GitOps — ArgoCD"]
+            ARGO["ArgoCD\nApp-of-Apps"]
+        end
+
+        subgraph DEMO["k8s-ref-demo namespace"]
+            TA["tenant-a\n2 × podinfo pods\n/metrics + UI"]
+            TB["tenant-b\n1 × podinfo pod\n/metrics + UI"]
+            ES["ExternalSecret\ntenant-config"]
+            CFD["cloudflared\n2 × Deployment\n(outbound tunnel)"]
+        end
+
+        subgraph OBS["observability namespace"]
+            PROM["Prometheus\nServiceMonitor scrape"]
+            GRAF["Grafana\nConfigMap dashboards"]
+            LOKI["Loki\nlog aggregation"]
+            TEMPO["Tempo\ndistributed traces"]
+        end
+
+        subgraph SEC["external-secrets namespace"]
+            ESO["External Secrets Operator\nClusterSecretStore\n(K8s provider)"]
+        end
+
+        subgraph INFRA["Cluster Infrastructure"]
+            ING["ingress-nginx\nTLS termination"]
+            CM["cert-manager\nhomelab-ca ClusterIssuer"]
+        end
+    end
+
+    GH -->|"pull / watch"| ARGO
+    ARGO -->|"manages"| TA
+    ARGO -->|"manages"| TB
+    ARGO -->|"manages"| ES
+    ARGO -->|"manages"| CFD
+    ARGO -->|"manages"| PROM
+    ARGO -->|"manages"| GRAF
+    ARGO -->|"manages"| LOKI
+    ARGO -->|"manages"| TEMPO
+    ARGO -->|"manages"| ESO
+    ARGO -->|"manages"| ING
+    ARGO -->|"manages"| CM
+
+    ESO -->|"reconcile secret"| ES
+    CM -->|"issues cert"| ING
+
+    TA -->|"ServiceMonitor"| PROM
+    TB -->|"ServiceMonitor"| PROM
+    PROM --> GRAF
+    LOKI --> GRAF
+    TEMPO --> GRAF
+
+    TA --> ING
+    TB --> ING
+    ING --> CFD
+    CFD -->|"outbound"| CF
+    CF -->|"k8s-ref-a.prudentiadigital.co.za"| INTERN
+    CF -->|"k8s-ref-b.prudentiadigital.co.za"| INTERN
