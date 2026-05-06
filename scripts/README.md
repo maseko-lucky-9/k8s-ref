@@ -9,12 +9,17 @@
 - Every script logs what it's about to do BEFORE doing it
 - Scripts are checked with `shellcheck` in CI
 
-## Planned scripts
+## Implemented scripts
 
 - `bootstrap-microk8s.sh` — One-shot homelab bootstrap (MicroK8s install + addons + ArgoCD seed)
+- `fetch-kubeconfig.sh` — Fetch homelab kubeconfig via Tailscale SSH; rewrites server URL for SSH-tunnel use
+- `verify-cluster.sh` — Read-only health probes: nodes ready, pods running, certs issued, ArgoCD synced; exits non-zero on failure
+- `install-cloudflared.sh` — Host-side cloudflared install + manual tunnel bootstrap runbook (see also `docs/runbooks/cloudflare-tunnel.md`)
+
+## Planned scripts
+
 - `bootstrap-eks.sh` — One-shot EKS bootstrap (terraform apply + ArgoCD seed)
 - `teardown-eks.sh` — Idempotent EKS teardown (cost guard)
-- `verify-cluster.sh` — Smoke check: control plane, nodes ready, ArgoCD synced, sample workload responding
 - `gen-readme-toc.sh` — Regenerate README table of contents (dev tool)
 
 ## Usage
