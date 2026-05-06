@@ -107,10 +107,13 @@ An `ExternalSecret` reconciles the `tenant-config` Secret from the `ClusterSecre
 
 ## Screenshots
 
-> _Capture during W4 session — 3 required for portfolio:_
-> 1. `kubectl get pods,ingress,certificate -n k8s-ref-demo` — cluster state
-> 2. ArgoCD UI — k8s-ref-demo app Synced/Healthy tree
-> 3. Grafana dashboard — HTTP request rate + memory panels showing live data
+> Captured during M1 W2/W3 homelab sessions — see `docs/portfolio-item.md` for status.
+
+| Screenshot | File | Status |
+|---|---|---|
+| `kubectl get pods,ingress,certificate -n k8s-ref-demo` | `docs/portfolio-item-assets/p4-kubectl-get-all.png` | Pending |
+| ArgoCD UI — k8s-ref-demo app Synced/Healthy tree | `docs/portfolio-item-assets/p5-argocd-healthy.png` | Pending |
+| Grafana dashboard — HTTP request rate + memory panels | `docs/portfolio-item-assets/p6-grafana-golden-signals.png` | Pending |
 
 ---
 
