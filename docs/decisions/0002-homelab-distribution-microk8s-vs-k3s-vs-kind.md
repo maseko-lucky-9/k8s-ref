@@ -4,7 +4,7 @@ Date: 2026-04-26
 
 ## Status
 
-Proposed — finalise during M1 (homelab bootstrap).
+Accepted — MicroK8s chosen. Validated during M1 W1 (2026-04-26 to 2026-05-06).
 
 ## Context
 
@@ -24,7 +24,7 @@ Constraints driving the choice:
 
 ## Decision
 
-**TBD — fill in during M1 kickoff.** Initial recommendation: **MicroK8s** (matches existing homelab + addons cover ESO/cert-manager/observability with one command). Final decision recorded here once M1 starts.
+**MicroK8s.** M1 W1 (2026-04-26) confirmed the leading candidate: all four target addons (ArgoCD, ESO, cert-manager, kube-prometheus-stack via Helm) deployed without custom config; RAM headroom remained >4 GB after the observability stack landed. The existing homelab already ran MicroK8s, so switching to k3s would have consumed the project time we needed for workload content and portfolio artefacts.
 
 ## Options considered
 
@@ -46,7 +46,7 @@ Constraints driving the choice:
 ## Trade-offs
 
 **Why MicroK8s (current homelab) is the leading candidate:**
-- Already running; existing addons (ArgoCD, ESO, Vault) tested and working
+- Already running; existing addons (ArgoCD, ESO, cert-manager, kube-prometheus-stack) tested and working (Vault wiring deferred to M2 per ADR-0003)
 - Repo time saved goes to actual workloads + observability content
 - Snap-based addons are unusual but Canonical-native — defensible in interview ("this matches what I'd run for a small SaaS that values one-command ops")
 
@@ -83,4 +83,4 @@ Choose **k3s** if:
 - Decision deferred to M1 kickoff means README current reads as "MicroK8s" without a recorded rationale until M1 lands
 
 **Neutral**
-- This ADR will be updated to "Accepted" with the chosen option once M1 begins. If we later switch (e.g., k3s wins after addon RAM analysis), this ADR is superseded by ADR-XXXX rather than edited in place.
+- Accepted on M1 W1 close-out (2026-05-06). If cluster RAM becomes a constraint as Loki/Tempo mature (M3), a k3s migration would be captured in a superseding ADR rather than editing this one in place.

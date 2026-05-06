@@ -68,7 +68,8 @@ Golden signals (latency, traffic, errors, saturation) visible in Grafana without
 | ADR | Decision | Status |
 |---|---|---|
 | [0001](../decisions/0001-record-architecture-decisions.md) | Use ADRs for all non-trivial decisions | Accepted |
-| [0002](../decisions/0002-homelab-distribution-microk8s-vs-k3s-vs-kind.md) | MicroK8s vs k3s vs kind | Proposed → finalise M1 |
+| [0002](../decisions/0002-homelab-distribution-microk8s-vs-k3s-vs-kind.md) | MicroK8s vs k3s vs kind | Accepted (M1 W1) |
+| [0003](../decisions/0003-secret-management-eso-vs-sealed-secrets.md) | ESO + K8s SecretStore (demo); Vault prod-swap M2 | Accepted (M1 W2) |
 
 ## Diagrams
 
