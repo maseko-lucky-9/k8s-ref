@@ -2,10 +2,12 @@
 
 > **Problem statement (per global CLAUDE.md project goals):** Engineering hiring managers can't tell from a CV whether a senior Kubernetes candidate can actually run a production-grade cluster. This repo gives them runnable evidence — a multi-tenant SaaS reference cluster they can clone, deploy, and inspect — proving production patterns end-to-end without trusting buzzwords.
 
+![Architecture](docs/architecture/assets/architecture-diagram.png)
+
 **Owner:** Thulani Maseko · Prudentia Digital
 **Status:** In progress (Project #1 of the freelance launch portfolio — see `wiki/career/project/portfolio-projects-shortlist.md` in the Obsidian vault)
-**Live demo:** TBD (homelab Cloudflare Tunnel — pending project completion)
-**Case study:** TBD (will live at `prudentiadigital.co.za/case-studies/k8s-ref-arch`)
+**Live demo:** Walk-through screenshots in `docs/portfolio-item-assets/`; live cluster available on request via Tailscale
+**Case study:** `docs/case-study/k8s-ref.md` · published at `prudentiadigital.co.za/case-studies/k8s-ref-arch` (pending M1 W3)
 
 ---
 
@@ -14,7 +16,7 @@
 A senior backend & DevOps engineer can stand up a production-grade Kubernetes platform end-to-end on commodity hardware:
 
 - **GitOps deploys** via ArgoCD ApplicationSet — every change is a git commit
-- **Secret management** via External Secrets Operator pulling from Vault
+- **Secret management** via External Secrets Operator (in-cluster Kubernetes SecretStore for demo; Vault prod-swap is a one-CRD change — see ADR-0003)
 - **TLS automation** via cert-manager + Let's Encrypt
 - **Multi-tenant isolation** via namespace + NetworkPolicy + RBAC
 - **Golden-signal observability** via Prometheus, Grafana, Loki, Tempo
@@ -33,9 +35,9 @@ A senior backend & DevOps engineer can stand up a production-grade Kubernetes pl
 - **Cluster:** MicroK8s 1.30+ (homelab) / AWS EKS 1.30+ (cloud recipe)
 - **GitOps:** ArgoCD with ApplicationSet for multi-env management
 - **Packaging:** Helm 3.x charts authored in this repo
-- **Secrets:** External Secrets Operator + HashiCorp Vault
+- **Secrets:** External Secrets Operator (in-cluster Kubernetes SecretStore for demo; Vault prod-swap documented in [ADR-0003](docs/decisions/0003-secret-management-eso-vs-sealed-secrets.md))
 - **TLS:** cert-manager + Let's Encrypt (DNS-01 challenge)
-- **Ingress:** ingress-nginx (homelab) / AWS ALB Controller (EKS)
+- **Ingress:** ingress-nginx (class: `public`, MicroK8s addon) / AWS ALB Controller (EKS)
 - **Observability:** Prometheus + Grafana + Loki + Tempo (kube-prometheus-stack baseline)
 - **IaC:** Terraform for the EKS recipe; Bash for MicroK8s bootstrap
 - **CI:** GitHub Actions
@@ -81,8 +83,9 @@ terraform apply
 
 ## Roadmap (build order)
 
-- [ ] **M1**: MicroK8s bootstrap + ArgoCD up + first sample app deployed
-- [ ] **M2**: cert-manager + ESO + Vault wired
+- [x] **M1 W1**: MicroK8s bootstrap + ArgoCD up + 2-tenant demo workload + TLS + ServiceMonitors
+- [ ] **M1 W2**: Grafana dashboards wired + ESO validated + kubeconfig-fetch script + ADR-0002/0003 ✅ (code done; screenshots pending)
+- [ ] **M2**: cert-manager + ESO + Vault wired (SecretStore swap from in-cluster K8s provider)
 - [ ] **M3**: kube-prometheus-stack + Loki + Tempo + sample dashboards
 - [ ] **M4**: Helm charts for sample multi-tenant SaaS workload
 - [ ] **M5**: AWS EKS Terraform recipe complete + tested
@@ -93,6 +96,10 @@ Estimated total: **40 hours** (per `wiki/career/project/launch-plan-6mo.md`).
 ## Code provenance
 
 All code in this repo is **greenfield** — written outside Capitec / Absa equipment and outside employment hours. **MIT licensed.** No production data; synthetic test data only.
+
+## Architecture Decision Records
+
+Non-trivial decisions are documented before implementation. See [docs/decisions/](docs/decisions/).
 
 ## License
 

@@ -6,6 +6,13 @@
 
 Production-grade Kubernetes reference cluster — Project #1 of the Prudentia Digital freelance launch portfolio. Greenfield code only; all changes off-hours.
 
+## Status (as of M1 W2, 2026-05-06)
+
+- **M1 W1** ✅ ArgoCD Helm deploy, 2 tenants, TLS, ServiceMonitors — complete
+- **M1 W2** 🔄 ADR-0002 Accepted, ADR-0003 written, README reconciled, kubeconfig-fetch + verify scripts added, observability docs cleaned — code complete; screenshots (P4/P5/P6) pending Phase A cluster session
+- **ADRs:** 0001 (ADR practice), 0002 (MicroK8s — Accepted), 0003 (ESO secret management — Accepted)
+- **Scripts:** `bootstrap-microk8s.sh` (existing), `fetch-kubeconfig.sh` (new), `verify-cluster.sh` (new)
+
 ## Tech stack
 
 - MicroK8s (homelab) + AWS EKS (cloud recipe)
