@@ -57,9 +57,9 @@ Kubernetes · DevOps · Amazon Web Services · Terraform · Docker · Helm · Mi
 
 ## Pending additions (gated on M1 W2–W4 homelab screenshots)
 
-- [ ] P4 — `kubectl get pods,ingress,certificate -n k8s-ref-demo` → `docs/portfolio-item-assets/p4-kubectl-get-all.png` (M1 W2)
-- [ ] P5 — ArgoCD UI Synced/Healthy tree → `docs/portfolio-item-assets/p5-argocd-healthy.png` (M1 W2)
-- [ ] P6 — Grafana golden-signals dashboard → `docs/portfolio-item-assets/p6-grafana-golden-signals.png` (M1 W3)
+- [x] P4 — `kubectl get pods,ingress,certificate -n k8s-ref-demo` — captured 2026-05-06 → `docs/portfolio-item-assets/p4-kubectl-get-all.png`
+- [ ] P5 — ArgoCD UI Synced/Healthy tree → `docs/portfolio-item-assets/p5-argocd-healthy.png` — deferred (homelab SSH AllowTcpForwarding hardened for `dev` user; live-cluster verified `Synced + Healthy` at revision `f218f8df` via CLI)
+- [ ] P6 — Grafana golden-signals dashboard → `docs/portfolio-item-assets/p6-grafana-golden-signals.png` — deferred (same blocker as P5; in-chart dashboard ConfigMap with valid metric expressions ready for capture)
 - [ ] P7 — Cloudflare Tunnel public URL (M1 W3) — see `docs/runbooks/cloudflare-tunnel.md`
 - [ ] P8 — Populate metrics table in `docs/case-study/k8s-ref.md` (M1 W4)
 
