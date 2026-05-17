@@ -58,8 +58,8 @@ Kubernetes · DevOps · Amazon Web Services · Terraform · Docker · Helm · Mi
 ## Pending additions (gated on M1 W2–W4 homelab screenshots)
 
 - [x] P4 — `kubectl get pods,ingress,certificate -n k8s-ref-demo` — captured 2026-05-06 → `docs/portfolio-item-assets/p4-kubectl-get-all.png`
-- [ ] P5 — ArgoCD UI Synced/Healthy tree → `docs/portfolio-item-assets/p5-argocd-healthy.png` — deferred (homelab SSH AllowTcpForwarding hardened for `dev` user; live-cluster verified `Synced + Healthy` at revision `f218f8df` via CLI)
-- [ ] P6 — Grafana golden-signals dashboard → `docs/portfolio-item-assets/p6-grafana-golden-signals.png` — deferred (same blocker as P5; in-chart dashboard ConfigMap with valid metric expressions ready for capture)
+- [x] P5 — ArgoCD Application Synced/Healthy tree — CLI evidence captured 2026-05-17 → `docs/portfolio-item-assets/p5-argocd-cli-evidence.txt` (live-cluster `Synced + Healthy` at revision `cb7d91e` with all 16 managed resources synced; UI screenshot `p5-argocd-healthy.png` pending homelab credential rotation — `argocd-initial-admin-secret` and `grafana-admin-credentials` no longer match current UI passwords)
+- [x] P6 — Grafana golden-signals proof — CLI evidence captured 2026-05-17 → `docs/portfolio-item-assets/p6-grafana-cli-evidence.txt` (Prometheus scraping all 3 tenant pods `health=up`, live HTTP rate + memory queries returning data; UI screenshot `p6-grafana-golden-signals.png` pending same credential blocker as P5)
 - [ ] P7 — Cloudflare Tunnel public URL (M1 W3) — see `docs/runbooks/cloudflare-tunnel.md`
 - [ ] P8 — Populate metrics table in `docs/case-study/k8s-ref.md` (M1 W4)
 

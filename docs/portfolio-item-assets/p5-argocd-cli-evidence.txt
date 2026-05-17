@@ -1,0 +1,39 @@
+# P5 — ArgoCD k8s-ref-demo Application state (CLI evidence)
+# Captured: 2026-05-17T13:20:44Z
+# Cluster revision: cb7d91e06a355266713e0a4cc8153b4f3a1c4b69
+# Git HEAD:         cb7d91e06a355266713e0a4cc8153b4f3a1c4b69
+
+## Application summary
+k8s-ref-demo   Synced   Healthy   cb7d91e06a355266713e0a4cc8153b4f3a1c4b69
+
+## Managed resources (tree)
+ConfigMap/k8s-ref-demo-dashboard  sync=Synced  health=
+Namespace/k8s-ref-demo  sync=Synced  health=
+Secret/eso-source-config  sync=Synced  health=
+Service/tenant-a  sync=Synced  health=
+Service/tenant-b  sync=Synced  health=
+ServiceAccount/eso-reader  sync=Synced  health=
+Deployment/tenant-a  sync=Synced  health=
+Deployment/tenant-b  sync=Synced  health=
+ClusterSecretStore/k8s-ref-demo-store  sync=Synced  health=
+ExternalSecret/tenant-config  sync=Synced  health=
+ServiceMonitor/tenant-a  sync=Synced  health=
+ServiceMonitor/tenant-b  sync=Synced  health=
+Ingress/tenant-a  sync=Synced  health=
+Ingress/tenant-b  sync=Synced  health=
+ClusterRole/k8s-ref-demo-eso-reader  sync=Synced  health=
+ClusterRoleBinding/k8s-ref-demo-eso-reader  sync=Synced  health=
+
+## Pods + Ingress + Certificate in tenant namespace
+NAME                            READY   STATUS    RESTARTS   AGE
+pod/tenant-a-5fd899d67c-flb8n   1/1     Running   7          14d
+pod/tenant-a-5fd899d67c-tcgth   1/1     Running   7          14d
+pod/tenant-b-77dcbbd7f8-4g4q5   1/1     Running   7          14d
+
+NAME                                 CLASS    HOSTS                     ADDRESS     PORTS     AGE
+ingress.networking.k8s.io/tenant-a   public   k8s-ref-a.homelab.local   127.0.0.1   80, 443   20d
+ingress.networking.k8s.io/tenant-b   public   k8s-ref-b.homelab.local   127.0.0.1   80, 443   20d
+
+NAME                                               READY   SECRET                 AGE
+certificate.cert-manager.io/homelab-tls-tenant-a   True    homelab-tls-tenant-a   20d
+certificate.cert-manager.io/homelab-tls-tenant-b   True    homelab-tls-tenant-b   20d

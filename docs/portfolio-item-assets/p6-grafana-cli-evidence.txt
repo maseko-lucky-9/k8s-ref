@@ -1,0 +1,29 @@
+# P6 — Grafana golden-signals proof (CLI evidence)
+# Captured: 2026-05-17T13:21:31Z
+
+## ServiceMonitors scraping tenant-a/b
+tenant-a   map[app:tenant-a]   metrics
+tenant-b   map[app:tenant-b]   metrics
+
+## Dashboard ConfigMap (auto-provisioned to Grafana via sidecar)
+{
+  "app.kubernetes.io/managed-by": "Helm",
+  "app.kubernetes.io/name": "k8s-ref-demo",
+  "grafana_dashboard": "1",
+  "helm.sh/chart": "k8s-ref-demo-0.1.0"
+}
+
+## Prometheus active targets scraping k8s-ref-demo
+  health=up  job=tenant-a  pod=tenant-a-5fd899d67c-tcgth  lastScrape=2026-05-17T13:21:21
+  health=up  job=tenant-a  pod=tenant-a-5fd899d67c-flb8n  lastScrape=2026-05-17T13:21:22
+  health=up  job=tenant-b  pod=tenant-b-77dcbbd7f8-4g4q5  lastScrape=2026-05-17T13:21:08
+
+## Sample golden-signal: HTTP request rate by tenant (last 5m)
+  pod=tenant-a-5fd899d67c-tcgth  value=0.2 req/s
+  pod=tenant-a-5fd899d67c-flb8n  value=0.2 req/s
+  pod=tenant-b-77dcbbd7f8-4g4q5  value=0.19999925926200277 req/s
+
+## Sample golden-signal: memory working set per tenant pod
+  pod=tenant-a-5fd899d67c-tcgth container=podinfo  bytes=36884480
+  pod=tenant-a-5fd899d67c-flb8n container=podinfo  bytes=21581824
+  pod=tenant-b-77dcbbd7f8-4g4q5 container=podinfo  bytes=20586496

@@ -44,3 +44,9 @@ secrets/
 dist/
 build/
 node_modules/
+
+# Tooling local state (never commit)
+.claude/
+.playwright-mcp/
+ruvector.db
+graphify-out/
