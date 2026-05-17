@@ -1,0 +1,101 @@
+# Idempotent bootstrap Job — runs after Vault pod is Ready (sync wave 1).
+# Safe to re-run on any sync: every command is either a `vault write` (upsert)
+# or guarded by an idempotency check.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: vault-bootstrap-config
+  namespace: {{ .Values.vaultNamespace }}
+  labels:
+    {{- include "vault-bootstrap.labels" . | nindent 4 }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+    # Re-run on every sync so seed data drift is corrected.
+    argocd.argoproj.io/hook: Sync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+spec:
+  backoffLimit: 5
+  ttlSecondsAfterFinished: 600
+  template:
+    metadata:
+      labels:
+        {{- include "vault-bootstrap.labels" . | nindent 8 }}
+    spec:
+      serviceAccountName: vault-bootstrap
+      restartPolicy: OnFailure
+      containers:
+        - name: bootstrap
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          env:
+            - name: VAULT_ADDR
+              value: "http://vault.{{ .Values.vaultNamespace }}.svc.cluster.local:8200"
+            - name: VAULT_TOKEN
+              value: "{{ .Values.devRootToken }}"
+            - name: KV_MOUNT
+              value: "{{ .Values.vault.kvMount }}"
+            - name: SECRET_PATH
+              value: "{{ .Values.vault.secretPath }}"
+            - name: POLICY_NAME
+              value: "{{ .Values.vault.policyName }}"
+            - name: ROLE_NAME
+              value: "{{ .Values.vault.roleName }}"
+            - name: ESO_SA_NAME
+              value: "{{ .Values.eso.serviceAccountName }}"
+            - name: ESO_SA_NAMESPACE
+              value: "{{ .Values.eso.serviceAccountNamespace }}"
+            - name: SEED_APP_ENV
+              value: {{ index .Values.vault.seedData "app-env" | quote }}
+            - name: SEED_FEATURE_FLAGS
+              value: {{ index .Values.vault.seedData "feature-flags" | quote }}
+            - name: SEED_LOG_LEVEL
+              value: {{ index .Values.vault.seedData "log-level" | quote }}
+          command:
+            - /bin/sh
+            - -c
+            - |
+              set -eu
+
+              echo "[bootstrap] waiting for Vault to become reachable…"
+              for i in $(seq 1 30); do
+                if vault status >/dev/null 2>&1; then break; fi
+                sleep 2
+              done
+              vault status
+
+              echo "[bootstrap] ensuring kubernetes auth method is enabled…"
+              if ! vault auth list -format=json | grep -q '"kubernetes/"'; then
+                vault auth enable kubernetes
+              fi
+
+              echo "[bootstrap] configuring kubernetes auth (idempotent write)…"
+              vault write auth/kubernetes/config \
+                kubernetes_host="https://kubernetes.default.svc.cluster.local" \
+                kubernetes_ca_cert=@/var/run/secrets/kubernetes.io/serviceaccount/ca.crt \
+                token_reviewer_jwt=@/var/run/secrets/kubernetes.io/serviceaccount/token \
+                disable_iss_validation=true
+
+              echo "[bootstrap] writing policy ${POLICY_NAME}…"
+              vault policy write "${POLICY_NAME}" - <<EOF
+              path "${KV_MOUNT}/data/${SECRET_PATH}" {
+                capabilities = ["read"]
+              }
+              path "${KV_MOUNT}/metadata/${SECRET_PATH}" {
+                capabilities = ["read", "list"]
+              }
+              EOF
+
+              echo "[bootstrap] binding role ${ROLE_NAME} to ${ESO_SA_NAMESPACE}/${ESO_SA_NAME}…"
+              vault write "auth/kubernetes/role/${ROLE_NAME}" \
+                bound_service_account_names="${ESO_SA_NAME}" \
+                bound_service_account_namespaces="${ESO_SA_NAMESPACE}" \
+                policies="${POLICY_NAME}" \
+                ttl=1h
+
+              echo "[bootstrap] seeding secret ${KV_MOUNT}/${SECRET_PATH}…"
+              vault kv put "${KV_MOUNT}/${SECRET_PATH}" \
+                "app-env=${SEED_APP_ENV}" \
+                "feature-flags=${SEED_FEATURE_FLAGS}" \
+                "log-level=${SEED_LOG_LEVEL}"
+
+              echo "[bootstrap] done."

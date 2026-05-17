@@ -32,10 +32,26 @@ Source plan: `/Users/ltmas/.claude/plans/let-resume-with-k8s-ref-stateless-moore
 - [ ] 3.4 Commit + session log
 
 ## Slice 4 — M2: ESO Vault swap (cert-manager already deployed by homelab-infra repo)
-- [ ] 4.1 Deploy Vault dev-mode via new `argocd/apps/vault.yaml` Application
-- [ ] 4.2 Parallel `ClusterSecretStore` pattern — add Vault-backed store alongside existing kubernetes-backed store
-- [ ] 4.3 Flip ExternalSecret `secretStoreRef.name` (real name: `tenant-config`, target Secret: per ExternalSecret spec)
-- [ ] 4.4 Rotation demo + screenshot P8 + ADR-next
+- [x] 4.1 Code: new `argocd/apps/vault.yaml` Application (hashicorp/vault@0.30.0 dev mode, wave 0)
+- [x] 4.1b Code: new `argocd/apps/vault-bootstrap.yaml` Application + in-repo chart `helm/charts/vault-bootstrap/` (idempotent Job, wave 1; enables k8s auth, writes policy, binds role to `eso-reader` SA, seeds `secret/eso-source-config`)
+- [x] 4.2 Code: parallel `ClusterSecretStore` gated by Helm value `eso.useVault` — false renders existing kubernetes store, true renders new `k8s-ref-demo-vault-store`. ExternalSecret `secretStoreRef.name` switches automatically.
+- [x] 4.2b Code: `helm/charts/k8s-ref-demo/values.yaml` + `values.schema.json` updated with `eso.useVault` + `eso.vault.*` block
+- [x] 4.3 ADR-0004 (`docs/decisions/0004-vault-dev-mode-for-eso-migration.md`) — Proposed status; documents posture, options, decision, consequences, runbook
+- [x] 4.4 Validation: `helm lint` passes both charts; `helm template` renders correctly for `useVault=false` and `useVault=true`
+- [ ] **APPLY STEP (user must run interactively)** — code work is complete; cluster mutation is deferred so user owns the Vault deploy decision:
+  ```
+  export KUBECONFIG=~/.kube/config-homelab
+  kubectl apply -f argocd/apps/vault.yaml
+  kubectl apply -f argocd/apps/vault-bootstrap.yaml
+  # Wait for both Synced+Healthy and the bootstrap Job to Complete
+  kubectl get applications -n argocd vault vault-bootstrap -w
+  kubectl get job -n vault vault-bootstrap-config -w
+  ```
+- [ ] Flip the feature flag: edit `helm/charts/k8s-ref-demo/values.yaml` → `eso.useVault: true`, commit + push, watch `k8s-ref-demo` Application reconcile.
+- [ ] Verify rotation: `vault kv put secret/eso-source-config app-env=demo-rotated …` → `kubectl annotate externalsecret -n k8s-ref-demo tenant-config force-sync=$(date +%s) --overwrite` → check `kubectl get secret -n k8s-ref-demo tenant-config -o jsonpath='{.data.app-env}' \| base64 -d`.
+- [ ] P8 screenshot: Vault UI (`http://127.0.0.1:8200` via port-forward, root token `root`) showing seeded data at `secret/eso-source-config`. Save to `docs/portfolio-item-assets/p8-vault-secrets.png`.
+- [ ] Cleanup commit: delete `helm/charts/k8s-ref-demo/templates/eso/cluster-secret-store.yaml` once Vault flow is proven.
+- [ ] Move ADR-0004 from Proposed → Accepted.
 
 ## Notable corrections vs original plan
 - Asset directory: `docs/portfolio-item-assets/` (not `docs/portfolio/screenshots/`).

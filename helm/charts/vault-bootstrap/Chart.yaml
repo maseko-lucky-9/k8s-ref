@@ -1,0 +1,12 @@
+apiVersion: v2
+name: vault-bootstrap
+description: |
+  One-shot bootstrap Job that configures Vault (dev mode) for the k8s-ref-demo
+  ESO migration: enables Kubernetes auth, creates the demo policy + role,
+  seeds the KV-v2 secret. Idempotent — safe to re-run on any sync.
+
+  Companion to the upstream hashicorp/vault Application. Runs after Vault
+  pod is Ready (sync wave 1).
+type: application
+version: 0.1.0
+appVersion: "1.0.0"

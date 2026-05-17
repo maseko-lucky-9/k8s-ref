@@ -49,7 +49,17 @@
       "type": "object",
       "properties": {
         "enabled": { "type": "boolean" },
-        "serviceAccountName": { "type": "string" }
+        "serviceAccountName": { "type": "string" },
+        "useVault": { "type": "boolean" },
+        "vault": {
+          "type": "object",
+          "properties": {
+            "server": { "type": "string" },
+            "kvMount": { "type": "string" },
+            "kvVersion": { "type": "string", "enum": ["v1", "v2"] },
+            "role": { "type": "string" }
+          }
+        }
       }
     }
   }

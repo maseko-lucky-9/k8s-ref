@@ -1,0 +1,48 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: vault
+  namespace: argocd
+  labels:
+    app.kubernetes.io/part-of: k8s-ref
+  annotations:
+    # Wave 0 — Vault must be Running before vault-bootstrap (wave 1) configures it.
+    argocd.argoproj.io/sync-wave: "0"
+spec:
+  project: default
+  source:
+    repoURL: https://helm.releases.hashicorp.com
+    chart: vault
+    targetRevision: 0.30.0
+    helm:
+      valuesObject:
+        # Dev mode: single in-memory unsealed Vault. NOT production — ADR-0004 documents posture.
+        server:
+          dev:
+            enabled: true
+            devRootToken: "root"
+          standalone:
+            enabled: false
+          ha:
+            enabled: false
+          dataStorage:
+            enabled: false
+          # Surface a stable service for ESO + bootstrap to reach.
+          service:
+            enabled: true
+        injector:
+          # The Vault Agent Injector is not used by this demo (ESO is the consumer).
+          enabled: false
+        ui:
+          enabled: true
+          serviceType: ClusterIP
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: vault
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: false
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true

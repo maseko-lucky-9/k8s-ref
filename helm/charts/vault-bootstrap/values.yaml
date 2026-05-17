@@ -1,0 +1,35 @@
+# yaml-language-server: $schema=values.schema.json
+
+# Namespace where Vault is deployed (matches argocd/apps/vault.yaml destination.namespace).
+vaultNamespace: vault
+
+# Vault dev-mode root token (must match server.dev.devRootToken in vault Application).
+# Dev-only — see ADR-0004. Production migration would use a different auth model.
+devRootToken: "root"
+
+# ESO consumer details — what we're seeding Vault for.
+eso:
+  # ESO ServiceAccount that Vault Kubernetes auth will trust.
+  serviceAccountName: eso-reader
+  serviceAccountNamespace: k8s-ref-demo
+
+# Vault config to seed.
+vault:
+  # KV-v2 mount (default `secret` is enabled by Vault dev-mode automatically).
+  kvMount: secret
+  # Path under the KV mount where the source secret lives.
+  secretPath: eso-source-config
+  # Policy and role names — referenced by the ESO ClusterSecretStore.
+  policyName: k8s-ref-demo-read
+  roleName: k8s-ref-demo
+  # Seed values for the demo secret. In production this would be populated
+  # via an external admin workflow, not a Helm chart.
+  seedData:
+    app-env: "production-vault"
+    feature-flags: "dark-mode=true,analytics=true,vault-backed=true"
+    log-level: "info"
+
+image:
+  repository: hashicorp/vault
+  tag: "1.18.1"
+  pullPolicy: IfNotPresent

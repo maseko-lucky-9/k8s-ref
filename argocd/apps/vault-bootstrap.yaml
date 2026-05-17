@@ -1,0 +1,34 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: vault-bootstrap
+  namespace: argocd
+  labels:
+    app.kubernetes.io/part-of: k8s-ref
+  annotations:
+    # Runs after vault Application (wave 0) finishes its first sync.
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/maseko-lucky-9/k8s-ref
+    targetRevision: HEAD
+    path: helm/charts/vault-bootstrap
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: vault
+  # The Job's status fields drift each run — ignore them so ArgoCD doesn't
+  # flap to OutOfSync between hook executions.
+  ignoreDifferences:
+    - group: batch
+      kind: Job
+      jsonPointers:
+        - /status
+        - /spec/template/metadata
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: false
+    syncOptions:
+      - ServerSideApply=true
+      - RespectIgnoreDifferences=true

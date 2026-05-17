@@ -40,6 +40,20 @@ serviceMonitor:
 eso:
   enabled: true
   serviceAccountName: eso-reader
+  # Set true to switch ExternalSecret from the in-cluster kubernetes provider
+  # to the Vault-backed ClusterSecretStore. Requires the `vault` and
+  # `vault-bootstrap` Applications synced first (see argocd/apps/vault*.yaml).
+  # Migration is gradual — both stores can coexist while flipping; remove
+  # cluster-secret-store.yaml in a follow-up commit after verifying.
+  useVault: false
+  vault:
+    # In-cluster Vault service URL (set by argocd/apps/vault.yaml deploy).
+    server: "http://vault.vault.svc.cluster.local:8200"
+    # KV-v2 mount Vault dev-mode enables by default.
+    kvMount: "secret"
+    kvVersion: "v2"
+    # Vault role name created by helm/charts/vault-bootstrap.
+    role: "k8s-ref-demo"
 
 # Cloudflare Tunnel — disabled until tunnel credentials secret is provisioned.
 # To enable:
