@@ -81,8 +81,18 @@ Two tenants (`tenant-a`, `tenant-b`) share the cluster but are logically isolate
 ### 3. Automated TLS
 `cert-manager` with a local CA (`homelab-ca` ClusterIssuer) issues per-ingress certificates automatically on annotation. No manual certificate management.
 
-### 4. Secrets Management with ESO
-An `ExternalSecret` reconciles the `tenant-config` Secret from the `ClusterSecretStore`. If the secret is deleted, ESO recreates it within 1 hour. In production, swap the Kubernetes provider for Vault or AWS Secrets Manager — same ExternalSecret spec.
+### 4. Secrets Management with ESO (M1 → M2 migration proven)
+
+An `ExternalSecret` reconciles the `tenant-config` Secret from the `ClusterSecretStore`. If the secret is deleted, ESO recreates it within 1 hour.
+
+**The interesting part isn't the secret read — it's the backend-swap demonstration.** [ADR-0003](../decisions/0003-secret-management-eso-vs-sealed-secrets.md) claimed that migrating from an in-cluster Kubernetes provider to a Vault provider changes *only* the `ClusterSecretStore`; the `ExternalSecret` spec stays byte-identical. [ADR-0004](../decisions/0004-vault-dev-mode-for-eso-migration.md) lands the migration and proves it mechanically:
+
+- Helm value `eso.useVault=false` renders the in-cluster `ClusterSecretStore` (M1 default).
+- Helm value `eso.useVault=true` renders a Vault-backed `ClusterSecretStore` + Vault dev-mode + a bootstrap Job (M2).
+- Diff between the two full chart renderings (633 lines each): **only the `ClusterSecretStore.spec.provider` block and the single field `ExternalSecret.spec.secretStoreRef.name` change.** Every byte of the `ExternalSecret`'s `data:` block, `target:`, `refreshInterval`, every `Deployment`, `Service`, `Ingress`, `Certificate`, `ServiceMonitor`, RBAC resource, and ConfigMap is identical between the two renderings.
+- See `docs/portfolio-item-assets/adr-0003-invariance-proof.diff` for the full unified diff.
+
+The migration is reversible (`helm upgrade --set eso.useVault=false`) and exercised end-to-end by `scripts/verify-eso-vault-migration.sh`, which (A) verifies both Applications are Synced+Healthy, (B) the bootstrap Job completed, (C-D) the new store is the active backend, (E) the materialised Secret has the seeded value, and (F) performs a rotation roundtrip (`vault kv put` → force ESO sync → poll Secret for the new value).
 
 ### 5. Observability Out of the Box
 `ServiceMonitor` resources register both tenants with Prometheus automatically (all-namespace selector). A Grafana dashboard ConfigMap (label `grafana_dashboard: "1"`) is auto-loaded by the sidecar — no Grafana UI interaction needed.
@@ -109,11 +119,12 @@ An `ExternalSecret` reconciles the `tenant-config` Secret from the `ClusterSecre
 
 > Captured during M1 W2/W3 homelab sessions — see `docs/portfolio-item.md` for status.
 
-| Screenshot | File | Status |
+| Artifact | File | Status |
 |---|---|---|
-| `kubectl get pods,ingress,certificate -n k8s-ref-demo` | `docs/portfolio-item-assets/p4-kubectl-get-all.png` | Pending |
-| ArgoCD UI — k8s-ref-demo app Synced/Healthy tree | `docs/portfolio-item-assets/p5-argocd-healthy.png` | Pending |
-| Grafana dashboard — HTTP request rate + memory panels | `docs/portfolio-item-assets/p6-grafana-golden-signals.png` | Pending |
+| `kubectl get pods,ingress,certificate -n k8s-ref-demo` | `docs/portfolio-item-assets/p4-kubectl-get-all.png` | ✅ Captured 2026-05-06 |
+| ArgoCD k8s-ref-demo Application — Synced+Healthy at git HEAD | `docs/portfolio-item-assets/p5-argocd-cli-evidence.txt` | ✅ CLI evidence 2026-05-17 (UI PNG pending password reset — see `scripts/reset-ui-admin-passwords.sh`) |
+| Grafana golden-signals — Prometheus targets + live HTTP rate + memory queries | `docs/portfolio-item-assets/p6-grafana-cli-evidence.txt` | ✅ CLI evidence 2026-05-17 (UI PNG pending password reset — same script) |
+| ADR-0003 invariance proof — full helm-template diff `useVault=false` vs `useVault=true` | `docs/portfolio-item-assets/adr-0003-invariance-proof.diff` | ✅ Generated 2026-05-17 |
 
 ---
 
@@ -135,18 +146,24 @@ k8s-ref/
 ├── docs/
 │   ├── architecture/   # Architecture diagrams
 │   ├── case-study/     # This document
-│   ├── decisions/      # ADRs (0001 practice, 0002 distribution choice)
+│   ├── decisions/      # ADRs 0001–0004 (practice, distribution, ESO posture, Vault dev-mode)
+│   ├── portfolio-item-assets/  # CLI evidence + invariance proof + screenshots
 │   └── runbooks/       # m1-kickoff.md — reproducible setup guide
 ├── helm/charts/
-│   └── k8s-ref-demo/   # Helm chart: multi-tenant demo workload
-│       ├── templates/
-│       │   ├── cloudflared/   # Tunnel deployment (disabled until creds)
-│       │   ├── eso/           # ClusterSecretStore + ExternalSecret
-│       │   └── ...            # Deployments, Services, Ingresses, ServiceMonitors
-│       └── values.yaml
+│   ├── k8s-ref-demo/   # Multi-tenant demo workload + ESO + cloudflared
+│   │   ├── templates/
+│   │   │   ├── cloudflared/             # Tunnel deployment (enabled when creds present)
+│   │   │   ├── eso/                     # K8s + Vault ClusterSecretStores (gated by useVault)
+│   │   │   └── ...                      # Deployments, Services, Ingresses, ServiceMonitors
+│   │   └── values.yaml
+│   └── vault-bootstrap/  # Idempotent Vault config Job (M2 — enables k8s auth, writes policy, seeds KV)
 ├── observability/      # Prometheus rules, Grafana config (planned W5+)
 ├── scripts/
 │   ├── bootstrap-microk8s.sh
+│   ├── fetch-kubeconfig.sh
+│   ├── verify-cluster.sh
+│   ├── reset-ui-admin-passwords.sh        # Helper to reconcile UI passwords with K8s Secrets
+│   ├── verify-eso-vault-migration.sh      # End-to-end check after Vault swap (Slice 4)
 │   └── install-cloudflared.sh
-└── terraform/          # EKS equivalent (planned W5+)
+└── terraform/          # EKS equivalent (planned M5)
 ```
