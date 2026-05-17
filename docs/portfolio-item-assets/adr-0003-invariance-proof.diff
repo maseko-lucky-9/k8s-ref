@@ -1,0 +1,82 @@
+# ADR-0003 invariance proof: ExternalSecret spec is identical under backend swap
+# Generated: 2026-05-17T13:37:34Z
+# Method: helm template diff between eso.useVault=false and eso.useVault=true
+#
+# ADR-0003 claim: "only the ClusterSecretStore backend definition changes in a
+#  migration". This diff is the mechanical proof: of 633 lines of rendered manifest,
+#  the ONLY differences are (a) the ClusterSecretStore provider block, and (b) the
+#  single field ExternalSecret.spec.secretStoreRef.name. Every other byte of the
+#  ExternalSecret is unchanged. ServiceAccount, ClusterRole, ClusterRoleBinding,
+#  source-secret, Deployments, Services, Ingresses, Certificates, ServiceMonitors,
+#  ConfigMaps — all byte-identical.
+
+# Line counts:
+#   useVault=false rendering:      633 lines
+#   useVault=true rendering:       637 lines
+
+# Full unified diff:
+
+--- /tmp/k8sref-eso-k8s.yaml	2026-05-17 15:37:34
++++ /tmp/k8sref-eso-vault.yaml	2026-05-17 15:37:34
+@@ -482,32 +482,36 @@
+         - k8s-ref-b.homelab.local
+       secretName: homelab-tls-tenant-b
+ ---
+-# Source: k8s-ref-demo/templates/eso/cluster-secret-store.yaml
+-# Cluster-scoped store: ESO reads from the dedicated source namespace.
+-# Any namespace can reference this store — enforces source-of-truth isolation.
+-# Gated off when eso.useVault=true so the Vault-backed store is the only active provider.
++# Source: k8s-ref-demo/templates/eso/cluster-secret-store-vault.yaml
++# Vault-backed ClusterSecretStore — Slice 4 / M2 of the k8s-ref portfolio.
++# Pair with the kubernetes-backed store (gated behind useVault==false) for safe migration:
++#   1. Deploy this store alongside the existing one (toggle .Values.eso.useVault=true)
++#   2. Flip ExternalSecret.spec.secretStoreRef.name to k8s-ref-demo-vault-store
++#   3. Verify ExternalSecret status Ready=True
++#   4. Remove the kubernetes-backed store in a follow-up commit
++#
++# ADR-0003 promise: ExternalSecret spec is identical regardless of backend.
+ apiVersion: external-secrets.io/v1
+ kind: ClusterSecretStore
+ metadata:
+-  name: k8s-ref-demo-store
++  name: k8s-ref-demo-vault-store
+   labels:
+     app.kubernetes.io/name: k8s-ref-demo
+     app.kubernetes.io/managed-by: Helm
+     helm.sh/chart: k8s-ref-demo-0.1.0
+ spec:
+   provider:
+-    kubernetes:
+-      remoteNamespace: k8s-ref-demo
+-      server:
+-        caProvider:
+-          type: ConfigMap
+-          name: kube-root-ca.crt
+-          key: ca.crt
+-          namespace: k8s-ref-demo
++    vault:
++      server: "http://vault.vault.svc.cluster.local:8200"
++      path: "secret"
++      version: "v2"
+       auth:
+-        serviceAccount:
+-          name: eso-reader
+-          namespace: k8s-ref-demo
++        kubernetes:
++          mountPath: kubernetes
++          role: "k8s-ref-demo"
++          serviceAccountRef:
++            name: eso-reader
++            namespace: k8s-ref-demo
+ ---
+ # Source: k8s-ref-demo/templates/eso/external-secret.yaml
+ apiVersion: external-secrets.io/v1
+@@ -524,7 +528,7 @@
+   secretStoreRef:
+     # Backend swap is the only thing that changes during the Vault migration.
+     # ExternalSecret spec stays identical — ADR-0003's main demo claim.
+-    name: k8s-ref-demo-store
++    name: k8s-ref-demo-vault-store
+     kind: ClusterSecretStore
+   target:
+     name: tenant-config

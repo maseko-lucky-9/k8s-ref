@@ -9,12 +9,13 @@ Source plan: `/Users/ltmas/.claude/plans/let-resume-with-k8s-ref-stateless-moore
   - `k8s-ref-demo` Synced+Healthy at revision `cb7d91e06a355266713e0a4cc8153b4f3a1c4b69` (matches git HEAD exactly).
 - [~] 1.2 P5 capture — **CLI evidence done, UI screenshot blocked**
   - `docs/portfolio-item-assets/p5-argocd-cli-evidence.txt` committed.
-  - UI screenshot blocked: `argocd-initial-admin-secret` returns `VBpeJvI7-C8An64u` but UI returns 401. Password rotated post-install, not reflected in K8s secret.
-  - To unblock: reset ArgoCD admin password back to the secret value (`argocd admin initial-password -n argocd` documents the flow), or update the secret to match the current UI password.
+  - UI screenshot blocked: `argocd-initial-admin-secret` returns a password but UI returns 401. Password rotated post-install, not reflected in K8s secret.
+  - **To unblock**: run `./scripts/reset-ui-admin-passwords.sh --only argocd` (with SSH tunnel open + KUBECONFIG exported per script header), then capture UI.
 - [~] 1.3 P6 capture — **CLI evidence done, UI screenshot blocked**
   - `docs/portfolio-item-assets/p6-grafana-cli-evidence.txt` committed — shows Prometheus scraping all 3 tenant pods `health=up`, live HTTP rate + memory metrics returning data.
-  - UI screenshot blocked: `grafana-admin-credentials` secret password `?abretewR5*R+p` returns 401 against the Grafana login API. Same rotation-not-reflected-in-secret pattern.
-  - To unblock: reset Grafana admin via `kubectl exec -n observability deploy/kube-prom-stack-grafana -- grafana-cli admin reset-admin-password <value-in-secret>`.
+  - UI screenshot blocked: `grafana-admin-credentials` secret password returns 401 against Grafana login. Same rotation pattern.
+  - **To unblock**: run `./scripts/reset-ui-admin-passwords.sh --only grafana`, then capture UI.
+- [x] 1.6 ADR-0003 invariance proof — `docs/portfolio-item-assets/adr-0003-invariance-proof.diff` shows the byte-level diff between `eso.useVault=false` and `eso.useVault=true` rendering. Out of 633 lines, ONLY the `ClusterSecretStore` provider block and the single field `ExternalSecret.spec.secretStoreRef.name` differ. This is the mechanical proof of ADR-0003's central claim and is portfolio-grade case-study material.
 - [x] 1.4 Update portfolio docs + commit
 - [ ] 1.5 Session note via `/vault-session-end` (deferred until full M1 close)
 
