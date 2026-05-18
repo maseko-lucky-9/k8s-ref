@@ -1,4 +1,9 @@
+{{- /*
+Plain Deployment renders for tenants WITHOUT `rollout: true`. Tenants flagged
+`rollout: true` get the Argo Rollouts variant in rollout.yaml (M3, ADR-0006).
+*/}}
 {{- range .Values.tenants }}
+{{- if not .rollout }}
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -50,4 +55,5 @@ spec:
             periodSeconds: 15
           resources:
             {{- toYaml $.Values.resources | nindent 12 }}
+{{- end }}
 {{- end }}

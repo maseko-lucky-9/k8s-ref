@@ -1,0 +1,95 @@
+{{- /*
+Argo Rollouts variant of the tenant Deployment. Rendered only for tenants
+flagged `rollout: true` in values.yaml. Tenants without the flag fall through
+to the plain Deployment in deployment.yaml — both patterns coexist in one
+cluster on purpose (demonstrates the migration path).
+
+Canary strategy is replica-count based (no service-mesh required). The
+existing Service for the tenant routes to all pods bearing `app: <name>`,
+so stable + canary share traffic proportionally to replica count.
+*/}}
+{{- range .Values.tenants }}
+{{- if .rollout }}
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+metadata:
+  name: {{ .name }}
+  namespace: {{ $.Values.namespace }}
+  labels:
+    {{- include "k8s-ref-demo.labels" $ | nindent 4 }}
+    app.kubernetes.io/component: {{ .name }}
+spec:
+  replicas: {{ .replicas }}
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels:
+      app: {{ .name }}
+  strategy:
+    canary:
+      # Stable + canary share the tenant Service via the `app: <name>` label.
+      # No service-mesh traffic-split needed; weight is enforced via replica
+      # count (replicas * setWeight / 100 = canary pod count).
+      maxSurge: "100%"
+      maxUnavailable: 0
+      steps:
+        - setWeight: 25
+        - pause: { duration: 30s }
+        - analysis:
+            templates:
+              - templateName: tenant-success-rate
+            args:
+              - name: tenant
+                value: {{ .name | quote }}
+              - name: namespace
+                value: {{ $.Values.namespace | quote }}
+        - setWeight: 50
+        - pause: { duration: 30s }
+        - analysis:
+            templates:
+              - templateName: tenant-success-rate
+            args:
+              - name: tenant
+                value: {{ .name | quote }}
+              - name: namespace
+                value: {{ $.Values.namespace | quote }}
+        - setWeight: 100
+  template:
+    metadata:
+      labels:
+        app: {{ .name }}
+        {{- include "k8s-ref-demo.labels" $ | nindent 8 }}
+        app.kubernetes.io/component: {{ .name }}
+    spec:
+      containers:
+        - name: podinfo
+          image: "{{ $.Values.image.repository }}:{{ $.Values.image.tag }}"
+          imagePullPolicy: {{ $.Values.image.pullPolicy }}
+          env:
+            - name: PODINFO_UI_COLOR
+              value: "#{{ .color }}"
+            - name: PODINFO_UI_MESSAGE
+              value: {{ .message | quote }}
+          ports:
+            - name: http
+              containerPort: 9898
+              protocol: TCP
+            - name: metrics
+              containerPort: 9797
+              protocol: TCP
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 15
+          resources:
+            {{- toYaml $.Values.resources | nindent 12 }}
+---
+{{- end }}
+{{- end }}

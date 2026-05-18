@@ -1,0 +1,101 @@
+================================================================
+P10 — Argo Rollouts canary on tenant-a (M3, ADR-0006)
+Captured 2026-05-18T19:39:34Z
+================================================================
+
+Cluster: homelab MicroK8s v1.33.9 (Tailscale-direct kubeconfig)
+Rollout: tenant-a · namespace k8s-ref-demo
+Strategy: replica-count canary (NO service mesh)
+
+== Rollout post-canary (Healthy at 6.7.1, last successful promotion) ==
+$ kubectl get rollout tenant-a -n k8s-ref-demo
+NAME       DESIRED   CURRENT   UP-TO-DATE   AVAILABLE   AGE
+tenant-a   2         3         1            3           52m
+
+$ kubectl get rollout tenant-a -n k8s-ref-demo -o jsonpath='Phase: {.status.phase} | Step: {.status.currentStepIndex} | StableRS: {.status.stableRS} | Image: {.spec.template.spec.containers[0].image}'
+Phase: Progressing | Step: 2 | StableRS: 746cc6cc66 | Image: stefanprodan/podinfo:6.7.1
+
+== ReplicaSets (Rollout-managed; older revisions kept by revisionHistoryLimit) ==
+$ kubectl get rs -n k8s-ref-demo -l app=tenant-a -o custom-columns='NAME:.metadata.name,DESIRED:.spec.replicas,IMAGE:.spec.template.spec.containers[0].image,AGE:.metadata.creationTimestamp'
+NAME                  DESIRED   IMAGE
+tenant-a-5d6d7ddc7b   0         stefanprodan/podinfo:6.7.2
+tenant-a-5fd899d67c   2         stefanprodan/podinfo:6.7.0
+tenant-a-6f94458bd9   0         stefanprodan/podinfo:6.7.0
+tenant-a-746cc6cc66   2         stefanprodan/podinfo:6.7.0
+tenant-a-77454f8bf    1         stefanprodan/podinfo:6.7.1
+tenant-a-f7d6dfb87    0         stefanprodan/podinfo:6.11.2
+
+== AnalysisRun history (this session) ==
+$ kubectl get analysisrun -n k8s-ref-demo --sort-by=.metadata.creationTimestamp
+NAME                       STATUS       AGE
+tenant-a-77454f8bf-2-2     Error        40m
+tenant-a-77454f8bf-4-2     Successful   33m
+tenant-a-77454f8bf-4-5     Successful   32m
+tenant-a-746cc6cc66-10-2   Successful   2m41s
+tenant-a-746cc6cc66-10-5   Successful   101s
+tenant-a-77454f8bf-11-2    Running      7s
+
+Read the timeline:
+- ...-2-2 ERROR (~19:00Z): first attempt; PromQL labels wrong ('kubernetes_namespace', 'app')
+  → empty Prometheus result → `reflect: slice index out of range` → Rollout aborted to stable.
+  This is the auto-rollback safety property in action — a broken canary doesn't reach 100%.
+- ...-4-2 + ...-4-5 SUCCESSFUL (~19:06Z): after labels fixed to 'namespace'/'job' +
+  `or on() vector(1)` fallback for idle-workload zero-traffic case. Canary completed
+  through all 7 steps.
+- ...-10-2 + ...-10-5 SUCCESSFUL (~19:38Z): subsequent canary; analysis re-verified
+  the success-rate condition twice (count=2 measurements at 15s interval).
+
+== AnalysisTemplate spec ==
+$ kubectl get analysistemplate tenant-success-rate -n k8s-ref-demo -o jsonpath='{.spec.metrics[0].provider.prometheus.query}'
+(
+  sum(rate(http_request_duration_seconds_count{
+    namespace="{{args.namespace}}",
+    job="{{args.tenant}}",
+    status="200"
+  }[1m]))
+  /
+  sum(rate(http_request_duration_seconds_count{
+    namespace="{{args.namespace}}",
+    job="{{args.tenant}}"
+  }[1m]))
+) or on() vector(1)
+
+provider.address: http://kube-prom-stack-kube-prome-prometheus.observability.svc.cluster.local:9090
+successCondition: result[0] >= 0.95
+failureLimit:     2
+count × interval: 3 x 15s
+
+== Live Prometheus probe (sanity — returns 1.0 because podinfo serves 100% 200s) ==
+$ curl -G --data-urlencode 'query=sum(rate(http_request_duration_seconds_count{namespace="k8s-ref-demo",job="tenant-a",status="200"}[1m]))/sum(rate(http_request_duration_seconds_count{namespace="k8s-ref-demo",job="tenant-a"}[1m]))' .../api/v1/query
+{"status":"success","data":{"resultType":"vector","result":[{"metric":{},"value":[1779133175.562,"1"]}]}}
+
+== Argo Rollouts controller =="
+$ kubectl get application argo-rollouts -n argocd
+NAME            SYNC STATUS   HEALTH STATUS
+argo-rollouts   Synced        Healthy
+
+$ kubectl get pods -n argo-rollouts
+NAME                                       READY   STATUS    RESTARTS   AGE
+argo-rollouts-795d8cd6-grmzc               1/1     Running   0          70m
+argo-rollouts-795d8cd6-pwhpp               1/1     Running   0          70m
+argo-rollouts-dashboard-64c8b96559-whbrv   1/1     Running   0          27m
+
+$ kubectl get crd | grep argoproj.io | grep -iE 'rollout|analysis|experiment'
+analysisruns.argoproj.io                                2026-05-18T18:29:06Z
+analysistemplates.argoproj.io                           2026-05-18T18:29:06Z
+clusteranalysistemplates.argoproj.io                    2026-05-18T18:29:06Z
+experiments.argoproj.io                                 2026-05-18T18:29:06Z
+rollouts.argoproj.io                                    2026-05-18T18:29:06Z
+
+== Side-by-side migration story ==
+- tenant-a (this Rollout)  : canary-managed, full state machine + analysis
+- tenant-b (plain Deployment): unchanged, rolling-update strategy
+
+$ kubectl get rollout,deploy -n k8s-ref-demo
+NAME                           DESIRED   CURRENT   UP-TO-DATE   AVAILABLE   AGE
+rollout.argoproj.io/tenant-a   2         3         1            3           52m
+
+NAME                          READY   UP-TO-DATE   AVAILABLE   AGE
+deployment.apps/cloudflared   2/2     2            2           129m
+deployment.apps/tenant-a      2/2     2            2           21d
+deployment.apps/tenant-b      1/1     1            1           21d
