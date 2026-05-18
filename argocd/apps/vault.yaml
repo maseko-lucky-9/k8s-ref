@@ -19,6 +19,14 @@ spec:
     chart: vault
     targetRevision: 0.30.0
     helm:
+      # Pin release name to `vault` so resource names stay short (Service
+      # `vault`, StatefulSet `vault`, pod `vault-0`). Without this the
+      # release name defaults to the ArgoCD Application name and Services
+      # become `vault-k8s-ref-demo*`, which breaks the bootstrap Job's
+      # hardcoded VAULT_ADDR and the ClusterSecretStore server URL.
+      # Namespace isolation (destination.namespace below) is the actual
+      # collision-avoidance mechanism — service-name isolation isn't needed.
+      releaseName: vault
       valuesObject:
         # Dev mode: single in-memory unsealed Vault. NOT production — ADR-0004 documents posture.
         server:
