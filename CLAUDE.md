@@ -6,12 +6,13 @@
 
 Production-grade Kubernetes reference cluster — Project #1 of the Prudentia Digital freelance launch portfolio. Greenfield code only; all changes off-hours.
 
-## Status (as of M1 W2, 2026-05-06)
+## Status (as of M2, 2026-05-18)
 
 - **M1 W1** ✅ ArgoCD Helm deploy, 2 tenants, TLS, ServiceMonitors — complete
-- **M1 W2** 🔄 ADR-0002 Accepted, ADR-0003 written, README reconciled, kubeconfig-fetch + verify scripts added, observability docs cleaned — code complete; screenshots (P4/P5/P6) pending Phase A cluster session
-- **ADRs:** 0001 (ADR practice), 0002 (MicroK8s — Accepted), 0003 (ESO secret management — Accepted)
-- **Scripts:** `bootstrap-microk8s.sh` (existing), `fetch-kubeconfig.sh` (new), `verify-cluster.sh` (new)
+- **M1 W2** ✅ ADR-0002/0003 Accepted, README reconciled, kubeconfig-fetch + verify scripts added, observability docs cleaned, P4 captured — code complete; P5/P6 still pending Phase A cluster session
+- **M2** 🔄 Vault dev-mode + bootstrap chart shipped, `eso.useVault` gated swap, ADR-0004 Proposed, `verify-eso-vault-migration.sh` + `reset-ui-admin-passwords.sh` + `m2-apply.md` runbook — code complete; cluster apply deferred to next session
+- **ADRs:** 0001 (ADR practice), 0002 (MicroK8s — Accepted), 0003 (ESO secret management — Accepted), 0004 (Vault dev-mode for ESO migration — Proposed, promote after apply)
+- **Scripts:** `bootstrap-microk8s.sh`, `fetch-kubeconfig.sh`, `verify-cluster.sh`, `verify-eso-vault-migration.sh` (new, M2), `reset-ui-admin-passwords.sh` (new, M2)
 
 ## Tech stack
 

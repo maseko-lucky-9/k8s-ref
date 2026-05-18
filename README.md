@@ -84,8 +84,8 @@ terraform apply
 ## Roadmap (build order)
 
 - [x] **M1 W1**: MicroK8s bootstrap + ArgoCD up + 2-tenant demo workload + TLS + ServiceMonitors
-- [ ] **M1 W2**: Grafana dashboards wired + ESO validated + kubeconfig-fetch script + ADR-0002/0003 ✅ (code done; screenshots pending)
-- [ ] **M2**: cert-manager + ESO + Vault wired (SecretStore swap from in-cluster K8s provider)
+- [x] **M1 W2**: Grafana dashboards wired + ESO validated + kubeconfig-fetch script + ADR-0002/0003 (code done; P4 captured, P5/P6 pending Phase A cluster session)
+- [ ] **M2**: cert-manager + ESO + Vault wired (SecretStore swap from in-cluster K8s provider) — **code complete, apply pending** (ADR-0004 Proposed; see `docs/runbooks/m2-apply.md`)
 - [ ] **M3**: kube-prometheus-stack + Loki + Tempo + sample dashboards
 - [ ] **M4**: Helm charts for sample multi-tenant SaaS workload
 - [ ] **M5**: AWS EKS Terraform recipe complete + tested
