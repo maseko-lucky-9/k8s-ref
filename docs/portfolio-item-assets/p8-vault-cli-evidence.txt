@@ -1,0 +1,66 @@
+================================================================
+P8 — Vault UI evidence (CLI-form; UI PNG capture pending)
+Captured 2026-05-18 via Tailscale-direct kubectl from MacBook.
+================================================================
+
+Cluster: homelab (MicroK8s v1.33.9), Tailscale 100.114.75.127
+Namespace: vault-k8s-ref-demo (namespace-isolated from production Vault)
+
+== Vault pod state ==
+vault-k8s-ref-demo-0: Running, container_ready=true, image=docker.io/hashicorp/vault:1.19.0, started_at=2026-05-18T16:03:13Z
+
+== Vault server status (in-cluster) ==
+Key             Value
+---             -----
+Seal Type       shamir
+Initialized     true
+Sealed          false
+Total Shares    1
+Threshold       1
+Version         1.19.0
+Build Date      2025-03-04T12:36:40Z
+Storage Type    inmem
+Cluster Name    vault-cluster-79fd82fc
+Cluster ID      57de2d62-9d05-acb4-1021-2e03da0d561e
+HA Enabled      false
+
+== KV secret seeded by bootstrap Job ==
+{
+  "request_id": "10c73f03-7502-159d-0058-870aa2ea91d3",
+  "lease_id": "",
+  "lease_duration": 0,
+  "renewable": false,
+  "data": {
+    "data": {
+      "app-env": "rotated-1779120483",
+      "feature-flags": "rotation-test=true",
+      "log-level": "debug"
+    },
+    "metadata": {
+      "created_time": "2026-05-18T16:08:03.889212203Z",
+      "custom_metadata": null,
+      "deletion_time": "",
+      "destroyed": false,
+      "version": 2
+    }
+  },
+  "warnings": null,
+  "mount_type": "kv"
+}
+
+== Kubernetes auth role binding ==
+{
+  "request_id": "ff63f9ea-1683-cb48-4f9c-8c59731c1067",
+  "lease_id": "",
+  "lease_duration": 0,
+  "renewable": false,
+  "data": {
+    "alias_name_source": "serviceaccount_uid",
+    "bound_service_account_names": [
+      "eso-reader"
+    ],
+    "bound_service_account_namespace_selector": "",
+    "bound_service_account_namespaces": [
+      "k8s-ref-demo"
+    ],
+    "policies": [

@@ -1,10 +1,17 @@
 # 4. Vault dev-mode for the ESO migration demo (M2)
 
-Date: 2026-05-17 · Revised: 2026-05-18 (namespace-isolation refactor)
+Date: 2026-05-17 · Revised: 2026-05-18 (namespace-isolation refactor) · Accepted: 2026-05-18
 
 ## Status
 
-Proposed (apply pending; promote to Accepted once Phase 2c verify returns 6/6)
+**Accepted** (2026-05-18) — Phase 2c verify-eso-vault-migration.sh returned 6/6 PASS. Rotation roundtrip: wrote new value to demo Vault → ExternalSecret picked it up → materialised K8s Secret updated in 1×2s polls. Migration functionally complete on the homelab cluster.
+
+## Consequences confirmed (2026-05-18 apply)
+
+- ESO → Vault wiring works end-to-end. `kubectl exec -n vault-k8s-ref-demo vault-k8s-ref-demo-0 -- vault kv put …` propagated through to the `tenant-config` K8s Secret in `k8s-ref-demo` within the first ESO refresh cycle (annotation-forced).
+- Namespace isolation held: production Vault at namespace `vault` was never touched. The 12 production ExternalSecrets across `affiliate-yt`, `n8n-live`, `observability`, `prod` remained `SecretSynced` throughout (where they were already synced — the 3 `SecretSyncedError`s in `affiliate-yt` and `n8n-live/reelsmith-youtube` predate this work).
+- Helm release name pinned to ArgoCD App name (`vault-k8s-ref-demo`) — discovered mid-apply that pinning to `vault` collided with production's `vault-server-binding` ClusterRoleBinding. Fixed via templated service-DNS in the bootstrap chart (commit `3a583fc`). This refinement strengthens the namespace-isolation guarantee — every chart-rendered resource now carries the App-name prefix, including cluster-scoped ones.
+- Two-tier rollback verified workable but not exercised: namespace-scoped resources + project-scoped ClusterRoleBinding name mean `kubectl delete namespace vault-k8s-ref-demo` cleanly removes everything without touching production. Force-delete + finalizer-strip required when ArgoCD's hook-finalizer on the bootstrap Job hung the namespace termination — captured in `docs/runbooks/m2-apply.md` as Tier 2 recovery.
 
 ## Context
 
