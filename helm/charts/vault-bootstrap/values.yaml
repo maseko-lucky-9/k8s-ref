@@ -10,9 +10,13 @@ vaultNamespace: vault-k8s-ref-demo
 # for the bootstrap Job. Keep in sync with argocd/apps/vault.yaml metadata.name.
 vaultServiceName: vault-k8s-ref-demo
 
-# Vault dev-mode root token (must match server.dev.devRootToken in vault Application).
-# Dev-only — see ADR-0004. Production migration would use a different auth model.
-devRootToken: "root"
+# Where to read the Vault root token. With prod-mode (ADR-0005), the
+# vault-init chart populates this Secret with the result of `vault operator
+# init`. Dev-mode (ADR-0004 era) wrote a hardcoded "root" token to the
+# Secret manually; both shapes look the same to this chart now.
+rootTokenSecret:
+  name: vault-init-keys
+  key: root-token
 
 # ESO consumer details — what we're seeding Vault for.
 eso:

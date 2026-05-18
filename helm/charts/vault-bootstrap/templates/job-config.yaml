@@ -40,8 +40,14 @@ spec:
           env:
             - name: VAULT_ADDR
               value: "http://{{ .Values.vaultServiceName }}.{{ .Values.vaultNamespace }}.svc.cluster.local:8200"
+            # Root token: dev-mode used a hardcoded literal; prod-mode reads
+            # from the K8s Secret populated by the vault-init chart's init
+            # branch (ADR-0005). The Secret key name is `root-token`.
             - name: VAULT_TOKEN
-              value: "{{ .Values.devRootToken }}"
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.rootTokenSecret.name }}
+                  key: {{ .Values.rootTokenSecret.key }}
             - name: KV_MOUNT
               value: "{{ .Values.vault.kvMount }}"
             - name: SECRET_PATH

@@ -1,5 +1,9 @@
 #!/usr/bin/env bash
-# Verifies the Slice 4 / M2 ESO → Vault migration end-to-end.
+# Verifies the ESO → Vault migration end-to-end (M2 dev-mode and M3 prod-mode
+# both pass the same 6 checks: CSS Valid, ExternalSecret SecretSynced, K8s
+# Secret materialised, rotation roundtrip propagates within one refresh).
+# Vault-shape agnostic — works against dev (inmem, hardcoded root token) and
+# prod (Raft, Shamir-unsealed, generated root token from vault-init-keys).
 #
 # Run this after:
 #   1. Applying argocd/apps/vault.yaml + argocd/apps/vault-bootstrap.yaml
