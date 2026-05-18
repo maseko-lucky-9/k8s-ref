@@ -12,12 +12,18 @@ tenants:
     replicas: 2
     message: "Tenant A — K8s reference demo"
     color: "4B8BBE"
+    # M3 (ADR-0006): manage tenant-a via Argo Rollouts canary instead of
+    # a plain Deployment. Stable + canary share the tenant-a Service via
+    # `app: tenant-a` label; replica-count canary, not service-mesh.
+    rollout: true
   - name: tenant-b
     host: k8s-ref-b.homelab.local
     publicHost: k8s-ref-b.prudentiadigital.co.za
     replicas: 1
     message: "Tenant B — K8s reference demo"
     color: "7C3AED"
+    # tenant-b stays as a plain Deployment on purpose — demonstrates the
+    # side-by-side migration story (some workloads canary, others don't).
 
 image:
   repository: stefanprodan/podinfo

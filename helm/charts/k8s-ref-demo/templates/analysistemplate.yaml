@@ -1,0 +1,57 @@
+{{- /*
+Prometheus-backed canary analysis: success rate over the last 1 minute must
+stay >= 95%. Runs at every `analysis` step in the Rollout's canary strategy.
+
+Wired against the existing kube-prometheus-stack install (ServiceMonitor
+already scrapes podinfo on port 9898 /metrics). No new scrape setup needed.
+
+Args are passed by the Rollout: `tenant` (e.g., "tenant-a") and `namespace`
+(e.g., "k8s-ref-demo"). Templated into the PromQL.
+*/}}
+{{- $anyRollout := false }}
+{{- range .Values.tenants }}{{- if .rollout }}{{- $anyRollout = true }}{{- end }}{{- end }}
+{{- if $anyRollout }}
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  name: tenant-success-rate
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "k8s-ref-demo.labels" . | nindent 4 }}
+spec:
+  args:
+    - name: tenant
+    - name: namespace
+  metrics:
+    - name: success-rate
+      # 3 measurements spaced 15s apart — gives time for traffic to register
+      # in Prometheus. failureLimit=2 means 2 consecutive failures abort.
+      count: 3
+      interval: 15s
+      successCondition: result[0] >= 0.95
+      failureLimit: 2
+      provider:
+        prometheus:
+          address: http://kube-prom-stack-kube-prome-prometheus.observability.svc.cluster.local:9090
+          # Labels match what kube-prometheus-stack actually stores after
+          # ServiceMonitor relabeling: `namespace` (not kubernetes_namespace)
+          # and `job` (which the ServiceMonitor sets to the Service name —
+          # `tenant-a` / `tenant-b`).
+          # `or on() vector(1)` returns 1.0 when the rate query yields no
+          # samples (e.g., canary pod just came up, no traffic yet). Without
+          # this fallback, the analysis errors with `reflect: slice index out
+          # of range` and the canary aborts on idle workloads.
+          query: |
+            (
+              sum(rate(http_request_duration_seconds_count{
+                namespace="{{ "{{" }}args.namespace{{ "}}" }}",
+                job="{{ "{{" }}args.tenant{{ "}}" }}",
+                status="200"
+              }[1m]))
+              /
+              sum(rate(http_request_duration_seconds_count{
+                namespace="{{ "{{" }}args.namespace{{ "}}" }}",
+                job="{{ "{{" }}args.tenant{{ "}}" }}"
+              }[1m]))
+            ) or on() vector(1)
+{{- end }}
