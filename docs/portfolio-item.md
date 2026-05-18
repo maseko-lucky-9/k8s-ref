@@ -55,12 +55,15 @@ Kubernetes · DevOps · Amazon Web Services · Terraform · Docker · Helm · Mi
 - [x] GitHub repo URL in description (`Repo: https://github.com/maseko-lucky-9/k8s-ref`) — Freelancer.com has no separate external URL field; description is the correct location
 - [x] Item visible on public profile (`freelancer.com/u/ThulaniMaseko`)
 
-## Pending additions (gated on M1 W2–W4 homelab screenshots)
+## Pending additions (gated on M1 W2–W4 homelab screenshots + M2 apply)
 
 - [x] P4 — `kubectl get pods,ingress,certificate -n k8s-ref-demo` — captured 2026-05-06 → `docs/portfolio-item-assets/p4-kubectl-get-all.png`
-- [x] P5 — ArgoCD Application Synced/Healthy tree — CLI evidence captured 2026-05-17 → `docs/portfolio-item-assets/p5-argocd-cli-evidence.txt` (live-cluster `Synced + Healthy` at revision `cb7d91e` with all 16 managed resources synced; UI screenshot `p5-argocd-healthy.png` pending homelab credential rotation — `argocd-initial-admin-secret` and `grafana-admin-credentials` no longer match current UI passwords)
-- [x] P6 — Grafana golden-signals proof — CLI evidence captured 2026-05-17 → `docs/portfolio-item-assets/p6-grafana-cli-evidence.txt` (Prometheus scraping all 3 tenant pods `health=up`, live HTTP rate + memory queries returning data; UI screenshot `p6-grafana-golden-signals.png` pending same credential blocker as P5)
-- [ ] P7 — Cloudflare Tunnel public URL (M1 W3) — see `docs/runbooks/cloudflare-tunnel.md`
-- [ ] P8 — Populate metrics table in `docs/case-study/k8s-ref.md` (M1 W4)
+- [x] P5 — ArgoCD Application Synced/Healthy tree — CLI evidence captured 2026-05-17 → `docs/portfolio-item-assets/p5-argocd-cli-evidence.txt` (live-cluster `Synced + Healthy` at revision `cb7d91e` with all 16 managed resources synced; UI screenshot `p5-argocd-healthy.png` pending Phase A cluster session — credential rotation via `scripts/reset-ui-admin-passwords.sh`)
+- [x] P6 — Grafana golden-signals proof — CLI evidence captured 2026-05-17 → `docs/portfolio-item-assets/p6-grafana-cli-evidence.txt` (Prometheus scraping all 3 tenant pods `health=up`, live HTTP rate + memory queries returning data; UI screenshot `p6-grafana-golden-signals.png` pending same Phase A session as P5)
+- [ ] P7 — Cloudflare Tunnel public URL (M1 W3) — gated on `cloudflared` install + Cloudflare account; see `docs/runbooks/cloudflare-tunnel.md` (to be written when prereqs land)
+- [ ] **P8** — Vault UI screenshot showing KV secrets (M2) — gated on Phase A cluster apply per `docs/runbooks/m2-apply.md`; ClickUp [869dbhcfd](https://app.clickup.com/t/869dbhcfd)
+- [ ] P9 — Populate metrics table in `docs/case-study/k8s-ref.md` (M1 W4) — covers actual P95/P99 latency, dashboard load time, etc. (separate from screenshot bundle)
 
-<!-- TODO: swap placeholder thumbnail in portfolio-website/portfolio-ui/public/images/projects/k8s-ref-arch/ once P4 screenshot is captured -->
+<!-- TODO (separate repo, out of scope here): swap placeholder thumbnail in portfolio-website/portfolio-ui/public/images/projects/k8s-ref-arch/ to cropped P5 ArgoCD UI screenshot once P5 PNG is captured in Phase A cluster session. Track as follow-up ticket against portfolio-website repo. -->
+<!-- ADR-0004 (Vault dev-mode for ESO migration) is currently Proposed; promote to Accepted after Phase 2c verify-eso-vault-migration.sh returns 6/6. ClickUp 869dbhch9. -->
+

@@ -5,9 +5,9 @@
 ![Architecture](docs/architecture/assets/architecture-diagram.png)
 
 **Owner:** Thulani Maseko · Prudentia Digital
-**Status:** In progress (Project #1 of the freelance launch portfolio — see `wiki/career/project/portfolio-projects-shortlist.md` in the Obsidian vault)
-**Live demo:** Walk-through screenshots in `docs/portfolio-item-assets/`; live cluster available on request via Tailscale
-**Case study:** `docs/case-study/k8s-ref.md` · published at `prudentiadigital.co.za/case-studies/k8s-ref-arch` (pending M1 W3)
+**Status:** M1 W1/W2 + M2 code-complete (2026-05-18). Cluster apply + public demo URL pending. See [Roadmap](#roadmap-build-order).
+**Live demo:** Walk-through screenshots in `docs/portfolio-item-assets/`; live cluster available on request via Tailscale. Public static demo URL deferred until [`cloudflared`](https://github.com/cloudflare/cloudflared) prerequisite is installed.
+**Case study:** [`docs/case-study/k8s-ref.md`](docs/case-study/k8s-ref.md) (live in-repo).
 
 ---
 
@@ -97,9 +97,30 @@ Estimated total: **40 hours** (per `wiki/career/project/launch-plan-6mo.md`).
 
 All code in this repo is **greenfield** — written outside Capitec / Absa equipment and outside employment hours. **MIT licensed.** No production data; synthetic test data only.
 
+## Demo evidence
+
+Captured artifacts live under [`docs/portfolio-item-assets/`](docs/portfolio-item-assets/):
+
+| Artifact | Status | What it proves |
+|---|---|---|
+| `p4-kubectl-get-all.png` | ✅ Live (2026-05-06) | Cluster + ArgoCD applications healthy, kubectl-level evidence |
+| `p5-argocd-cli-evidence.txt` | ✅ Live (CLI, 2026-05-17) — UI PNG pending | ArgoCD Applications synced via CLI |
+| `p6-grafana-cli-evidence.txt` | ✅ Live (CLI, 2026-05-17) — UI PNG pending | kube-prometheus dashboards loaded |
+| `p8-vault-ui.png` | ⏳ Pending Phase A cluster session | Vault KV secrets visible (post-M2 apply) |
+| `adr-0003-invariance-proof.diff` | ✅ Live (2026-05-17) | Single-CRD swap proof for ESO Vault migration |
+
+`docs/case-study/k8s-ref.md` cross-links every artifact with full context.
+
 ## Architecture Decision Records
 
-Non-trivial decisions are documented before implementation. See [docs/decisions/](docs/decisions/).
+Non-trivial decisions are documented before implementation. Michael Nygard format. See [`docs/decisions/`](docs/decisions/).
+
+| ADR | Decision | Status |
+|---|---|---|
+| [0001](docs/decisions/0001-record-architecture-decisions.md) | Record architecture decisions | Accepted |
+| [0002](docs/decisions/0002-homelab-distribution-microk8s-vs-k3s-vs-kind.md) | Homelab distribution: MicroK8s vs k3s vs kind | Accepted |
+| [0003](docs/decisions/0003-secret-management-eso-vs-sealed-secrets.md) | Secret management: ESO vs Sealed Secrets | Accepted |
+| [0004](docs/decisions/0004-vault-dev-mode-for-eso-migration.md) | Vault dev-mode for ESO migration | Proposed (promote after M2 apply) |
 
 ## License
 
