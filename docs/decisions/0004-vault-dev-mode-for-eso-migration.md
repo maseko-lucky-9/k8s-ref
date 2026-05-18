@@ -13,6 +13,14 @@ Date: 2026-05-17 · Revised: 2026-05-18 (namespace-isolation refactor) · Accept
 - Helm release name pinned to ArgoCD App name (`vault-k8s-ref-demo`) — discovered mid-apply that pinning to `vault` collided with production's `vault-server-binding` ClusterRoleBinding. Fixed via templated service-DNS in the bootstrap chart (commit `3a583fc`). This refinement strengthens the namespace-isolation guarantee — every chart-rendered resource now carries the App-name prefix, including cluster-scoped ones.
 - Two-tier rollback verified workable but not exercised: namespace-scoped resources + project-scoped ClusterRoleBinding name mean `kubectl delete namespace vault-k8s-ref-demo` cleanly removes everything without touching production. Force-delete + finalizer-strip required when ArgoCD's hook-finalizer on the bootstrap Job hung the namespace termination — captured in `docs/runbooks/m2-apply.md` as Tier 2 recovery.
 
+## Follow-up — `token_reviewer_jwt` expiry (caught post-apply)
+
+~4 hours after the verify passed, the `ClusterSecretStore` flipped to `InvalidProviderConfig` with Vault returning `403 permission denied` on every `auth/kubernetes/login`. Root cause: the bootstrap Job's first version used the pod's *projected* SA token (`/var/run/secrets/kubernetes.io/serviceaccount/token`) for Vault's `token_reviewer_jwt`. The kubelet rotates projected tokens on a ~1h cadence — the token Vault had stored became invalid, so every TokenReview Vault issued to the apiserver was rejected, and Vault rejected the inbound ESO login in turn.
+
+**Fix landed in the chart:** a long-lived `Secret` of type `kubernetes.io/service-account-token` (auto-populated by K8s with a non-expiring token for the bootstrap SA) is now mounted into the Job at `/var/run/vault-bootstrap-token`, and `token_reviewer_jwt` is read from there. Verified live: re-bootstrapped with the durable token, `ClusterSecretStore` flipped to `Valid` within seconds.
+
+This is the canonical Vault-K8s-auth bootstrap pattern; the projected-token shortcut was a real gap, not a stylistic choice. Documented here rather than as a separate ADR because it doesn't change the M2 decision — it makes the original decision durable.
+
 ## Context
 
 ADR-0003 committed to demonstrating that the `k8s-ref-demo` `ExternalSecret`

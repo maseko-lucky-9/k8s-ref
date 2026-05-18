@@ -23,10 +23,20 @@ spec:
     spec:
       serviceAccountName: vault-bootstrap
       restartPolicy: OnFailure
+      volumes:
+        # Mount the long-lived SA-token Secret so Vault's `token_reviewer_jwt`
+        # is set from a non-expiring token (see serviceaccount.yaml for why).
+        - name: vault-bootstrap-token
+          secret:
+            secretName: vault-bootstrap-token
       containers:
         - name: bootstrap
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
+          volumeMounts:
+            - name: vault-bootstrap-token
+              mountPath: /var/run/vault-bootstrap-token
+              readOnly: true
           env:
             - name: VAULT_ADDR
               value: "http://{{ .Values.vaultServiceName }}.{{ .Values.vaultNamespace }}.svc.cluster.local:8200"
@@ -69,10 +79,13 @@ spec:
               fi
 
               echo "[bootstrap] configuring kubernetes auth (idempotent write)…"
+              # token_reviewer_jwt MUST be the long-lived SA-token Secret, not
+              # the projected pod token, or Vault's TokenReview calls fail with
+              # 403 ~1h after this Job completes.
               vault write auth/kubernetes/config \
                 kubernetes_host="https://kubernetes.default.svc.cluster.local" \
-                kubernetes_ca_cert=@/var/run/secrets/kubernetes.io/serviceaccount/ca.crt \
-                token_reviewer_jwt=@/var/run/secrets/kubernetes.io/serviceaccount/token \
+                kubernetes_ca_cert=@/var/run/vault-bootstrap-token/ca.crt \
+                token_reviewer_jwt=@/var/run/vault-bootstrap-token/token \
                 disable_iss_validation=true
 
               echo "[bootstrap] writing policy ${POLICY_NAME}…"
