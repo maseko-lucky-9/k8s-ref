@@ -1,0 +1,46 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: argo-rollouts
+  namespace: argocd
+  labels:
+    app.kubernetes.io/part-of: k8s-ref
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://argoproj.github.io/argo-helm
+    chart: argo-rollouts
+    targetRevision: 2.40.9
+    helm:
+      releaseName: argo-rollouts
+      valuesObject:
+        installCRDs: true
+        controller:
+          metrics:
+            enabled: true
+            serviceMonitor:
+              enabled: true
+              additionalLabels:
+                release: kube-prom-stack
+        dashboard:
+          enabled: true
+          # Cluster-internal only — do NOT add to Cloudflare Tunnel ingress.
+          # Reach via `kubectl port-forward -n argo-rollouts svc/argo-rollouts-dashboard 3100:3100`.
+          service:
+            type: ClusterIP
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argo-rollouts
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+      # Rollouts CRDs are too big for default client-side apply (annotation
+      # size limit). Server-side apply handles them; the option below makes
+      # ArgoCD skip the dry-run validation that also trips on CRD size.
+      - Replace=true
