@@ -1,0 +1,53 @@
+================================================================
+P7 — Cloudflare Tunnel public exposure evidence
+Captured 2026-05-18T17:34:17Z
+================================================================
+
+== Tunnel ==
+NAME:     k8s-ref-demo
+ID:       f2fbd78e-a9ed-48b1-b361-93361e440df4
+CREATED:  2026-05-18 17:27:38 UTC
+
+== Connector pods (in-cluster) ==
+No resources found in k8s-ref-demo namespace.
+
+== Active edge connections (4 across Cloudflare Johannesburg) ==
+CONNECTOR ID                         CREATED              ARCHITECTURE VERSION  ORIGIN IP       EDGE                      
+9ed65c60-5f2d-41a6-b87c-c199cb7f1f72 2026-05-18T17:32:20Z linux_amd64  2026.5.0 197.185.168.164 1xjnb01, 2xjnb03, 1xjnb04 
+c6738249-40ac-4b1d-9fde-8da9f812b480 2026-05-18T17:32:20Z linux_amd64  2026.5.0 197.185.168.164 1xjnb01, 2xjnb03, 1xjnb04 
+
+== DNS resolution (public DNS via 1.1.1.1) ==
+k8s-ref-a.prudentiadigital.co.za → 104.21.81.224 172.67.165.100 
+k8s-ref-b.prudentiadigital.co.za → 172.67.165.100 104.21.81.224 
+
+== TLS chain ==
+subject=CN=prudentiadigital.co.za
+issuer=C=US, O=Google Trust Services, CN=WE1
+notBefore=Apr  6 12:05:36 2026 GMT
+notAfter=Jul  5 13:04:17 2026 GMT
+
+== Live HTTP response (tenant A) ==
+$ curl -sI https://k8s-ref-a.prudentiadigital.co.za/
+HTTP/2 405 
+date: Mon, 18 May 2026 17:34:36 GMT
+cf-cache-status: DYNAMIC
+strict-transport-security: max-age=31536000; includeSubDomains
+x-content-type-options: nosniff
+report-to: {"group":"cf-nel","max_age":604800,"endpoints":[{"url":"https://a.nel.cloudflare.com/report/v4?s=S%2BKYPgJLwXfipWjrZoO6ujobEA2UNCLXmWxl4rJQoRKKuKcbiTsRX7v73pOw402cu%2BAD9xZm1oztuZJdBPhL%2BgkXyevC9Svr950UgX7r3TZI59NP2AT53p7v%2BPtJj9veRj%2FS4OPfu5SZA%2BxUbEmXonKl3g%3D%3D"}]}
+nel: {"report_to":"cf-nel","success_fraction":0.0,"max_age":604800}
+server: cloudflare
+
+$ curl -s https://k8s-ref-a.prudentiadigital.co.za/ | jq -r '"\(.hostname) — \(.message)"'
+tenant-a-5fd899d67c-tcgth — Tenant A — K8s reference demo
+
+== Live HTTP response (tenant B) ==
+$ curl -s https://k8s-ref-b.prudentiadigital.co.za/ | jq -r '"\(.hostname) — \(.message)"'
+tenant-b-77dcbbd7f8-4g4q5 — Tenant B — K8s reference demo
+
+== Zero-trust property: ArgoCD/Grafana/Vault NOT in tunnel ingress ==
+    metrics: 0.0.0.0:2000\nno-autoupdate: true\ningress:\n  - hostname: k8s-ref-a.prudentiadigital.co.za\n\
+    \    service: http://tenant-a.k8s-ref-demo.svc.cluster.local\n  - hostname: k8s-ref-b.prudentiadigital.co.za\n\
+    \    service: http://tenant-b.k8s-ref-demo.svc.cluster.local\n  - service: http_status:404\n"
+
+== Network boundary: no inbound firewall ports opened on homelab ==
+Tunnel is outbound-only (QUIC over UDP/443) from cluster → Cloudflare edge.

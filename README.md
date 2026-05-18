@@ -5,8 +5,8 @@
 ![Architecture](docs/architecture/assets/architecture-diagram.png)
 
 **Owner:** Thulani Maseko · Prudentia Digital
-**Status:** M1 W1/W2 + M2 code-complete (2026-05-18). Cluster apply + public demo URL pending. See [Roadmap](#roadmap-build-order).
-**Live demo:** Walk-through screenshots in `docs/portfolio-item-assets/`; live cluster available on request via Tailscale. Public static demo URL deferred until [`cloudflared`](https://github.com/cloudflare/cloudflared) prerequisite is installed.
+**Status:** M1 + M2 SHIPPED end-to-end (2026-05-18). Public demo live. M3 in planning. See [Roadmap](#roadmap-build-order).
+**Live demo:** **[k8s-ref-a.prudentiadigital.co.za](https://k8s-ref-a.prudentiadigital.co.za)** · **[k8s-ref-b.prudentiadigital.co.za](https://k8s-ref-b.prudentiadigital.co.za)** — two tenants of the live homelab cluster, served via Cloudflare Tunnel (zero firewall ports opened). Screenshot bundle in [`docs/portfolio-item-assets/`](docs/portfolio-item-assets/); tunnel runbook at [`docs/runbooks/cloudflare-tunnel.md`](docs/runbooks/cloudflare-tunnel.md).
 **Case study:** [`docs/case-study/k8s-ref.md`](docs/case-study/k8s-ref.md) (live in-repo).
 
 ---

@@ -59,14 +59,20 @@ eso:
     # Vault role name created by helm/charts/vault-bootstrap.
     role: "k8s-ref-demo"
 
-# Cloudflare Tunnel — disabled until tunnel credentials secret is provisioned.
-# To enable:
-#   1. Create tunnel: cloudflared tunnel create k8s-ref (via Cloudflare Zero Trust dashboard or CLI)
+# Cloudflare Tunnel — enabled 2026-05-18 (M1 W3, see ClickUp 869d6ph0v).
+# Routes tenant Services through a zero-trust outbound tunnel; no firewall
+# ports opened on the homelab. ArgoCD/Grafana/Vault UIs are deliberately NOT
+# in the tunnel ingress map (see helm/charts/k8s-ref-demo/templates/cloudflared/configmap.yaml).
+#
+# To rotate the tunnel (e.g., after compromise):
+#   1. cloudflared tunnel delete <uuid> + create fresh
 #   2. kubectl create secret generic cloudflared-tunnel-creds \
-#        --from-file=credentials.json=<path-to-creds.json> -n k8s-ref-demo
-#   3. Set cloudflared.enabled=true and cloudflared.tunnelId=<uuid> in ArgoCD app values
+#        --from-file=credentials.json=<path-to-creds.json> -n k8s-ref-demo \
+#        --dry-run=client -o yaml | kubectl apply -f -
+#   3. Update cloudflared.tunnelId below and ArgoCD sync
+#   4. cloudflared tunnel route dns <new-uuid> <hostname>  # per tenant
 cloudflared:
-  enabled: false
-  tunnelId: ""
-  imageTag: "2025.4.0"
+  enabled: true
+  tunnelId: "f2fbd78e-a9ed-48b1-b361-93361e440df4"
+  imageTag: "2026.5.0"
   credentialsSecret: cloudflared-tunnel-creds
