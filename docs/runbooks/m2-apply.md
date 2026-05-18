@@ -82,7 +82,7 @@ eso:
   serviceAccountName: eso-reader
   useVault: true   # ← was false
   vault:
-    server: "http://vault.vault-k8s-ref-demo.svc.cluster.local:8200"
+    server: "http://vault-k8s-ref-demo.vault-k8s-ref-demo.svc.cluster.local:8200"
     kvMount: "secret"
     kvVersion: "v2"
     role: "k8s-ref-demo"
@@ -134,7 +134,7 @@ If step (F) rotation roundtrip fails, the migration is functionally complete (re
 Port-forward the demo Vault UI:
 
 ```bash
-kubectl port-forward -n vault-k8s-ref-demo svc/vault 8200:8200
+kubectl port-forward -n vault-k8s-ref-demo svc/vault-k8s-ref-demo 8200:8200
 ```
 
 Open `http://127.0.0.1:8200` → log in with token `root` → browse to `secret/eso-source-config`.

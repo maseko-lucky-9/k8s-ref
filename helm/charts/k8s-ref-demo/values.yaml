@@ -48,9 +48,11 @@ eso:
   useVault: false
   vault:
     # In-cluster *demo* Vault service URL (set by argocd/apps/vault.yaml deploy).
-    # Namespace-isolated from the homelab's production Vault at namespace `vault`
-    # — see ADR-0004 § Namespace isolation.
-    server: "http://vault.vault-k8s-ref-demo.svc.cluster.local:8200"
+    # Service name = Helm release name of upstream hashicorp/vault chart, which
+    # defaults to the ArgoCD Application name (vault-k8s-ref-demo). Namespace-
+    # isolated from the homelab's production Vault — see ADR-0004 § Namespace
+    # isolation. Production Vault stays at vault.vault.svc.cluster.local:8200.
+    server: "http://vault-k8s-ref-demo.vault-k8s-ref-demo.svc.cluster.local:8200"
     # KV-v2 mount Vault dev-mode enables by default.
     kvMount: "secret"
     kvVersion: "v2"

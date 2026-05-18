@@ -112,7 +112,7 @@ fi
 echo "[F] Rotation roundtrip (demo Vault → ESO → K8s Secret)…"
 new_value="rotated-$(date +%s)"
 note "Writing '$new_value' to secret/eso-source-config in demo Vault…"
-kubectl exec -n vault-k8s-ref-demo vault-0 -- sh -c \
+kubectl exec -n vault-k8s-ref-demo vault-k8s-ref-demo-0 -- sh -c \
   "VAULT_TOKEN=root vault kv put secret/eso-source-config \
      app-env='$new_value' \
      feature-flags='rotation-test=true' \

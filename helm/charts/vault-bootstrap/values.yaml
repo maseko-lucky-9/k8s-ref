@@ -5,6 +5,11 @@
 # namespace `vault` — see ADR-0004 § Namespace isolation.
 vaultNamespace: vault-k8s-ref-demo
 
+# Vault Service DNS name (release name of the upstream hashicorp/vault chart,
+# which defaults to the ArgoCD Application name). Used to construct VAULT_ADDR
+# for the bootstrap Job. Keep in sync with argocd/apps/vault.yaml metadata.name.
+vaultServiceName: vault-k8s-ref-demo
+
 # Vault dev-mode root token (must match server.dev.devRootToken in vault Application).
 # Dev-only — see ADR-0004. Production migration would use a different auth model.
 devRootToken: "root"

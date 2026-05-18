@@ -29,7 +29,7 @@ spec:
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           env:
             - name: VAULT_ADDR
-              value: "http://vault.{{ .Values.vaultNamespace }}.svc.cluster.local:8200"
+              value: "http://{{ .Values.vaultServiceName }}.{{ .Values.vaultNamespace }}.svc.cluster.local:8200"
             - name: VAULT_TOKEN
               value: "{{ .Values.devRootToken }}"
             - name: KV_MOUNT
