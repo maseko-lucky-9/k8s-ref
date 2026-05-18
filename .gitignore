@@ -50,3 +50,6 @@ node_modules/
 .playwright-mcp/
 ruvector.db
 graphify-out/
+
+# M2 apply session checkpoint marker (local-only, not part of runbook history)
+docs/runbooks/m2-apply.progress.md
