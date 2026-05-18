@@ -1,10 +1,10 @@
 # 4. Vault dev-mode for the ESO migration demo (M2)
 
-Date: 2026-05-17
+Date: 2026-05-17 · Revised: 2026-05-18 (namespace-isolation refactor)
 
 ## Status
 
-Proposed
+Proposed (apply pending; promote to Accepted once Phase 2c verify returns 6/6)
 
 ## Context
 
@@ -42,11 +42,12 @@ options exist for an in-cluster Vault used purely to demo the ESO swap.
 ## Decision
 
 **Vault dev mode** (`server.dev.enabled=true`) with a fixed root token,
-deployed as ArgoCD Application `vault` (Helm chart
-`hashicorp/vault@0.30.0`). A second Application `vault-bootstrap` runs a
-one-shot Job in sync wave 1 that enables Kubernetes auth, writes the
-read-only policy on the demo path, binds the role to the existing
-`eso-reader` ServiceAccount, and seeds the KV-v2 secret.
+deployed as ArgoCD Application `vault-k8s-ref-demo` (Helm chart
+`hashicorp/vault@0.30.0`) into namespace `vault-k8s-ref-demo`. A second
+Application `vault-k8s-ref-demo-bootstrap` runs a one-shot Job in sync
+wave 1 that enables Kubernetes auth, writes the read-only policy on the
+demo path, binds the role to the existing `eso-reader` ServiceAccount,
+and seeds the KV-v2 secret.
 
 The `ClusterSecretStore` migration is gated behind a single Helm value
 `eso.useVault` (default `false`). When set to `true`:
@@ -99,12 +100,56 @@ cycle (annotation-forced for the demo).
   idempotency + ArgoCD's Sync hook re-running on every reconcile.
 
 ### Neutral
-- Adds two new ArgoCD Applications (`vault`, `vault-bootstrap`) and one
-  new in-repo Helm chart (`helm/charts/vault-bootstrap`). All scoped to
-  the `vault` namespace.
+- Adds two new ArgoCD Applications (`vault-k8s-ref-demo`,
+  `vault-k8s-ref-demo-bootstrap`) and one new in-repo Helm chart
+  (`helm/charts/vault-bootstrap`). All scoped to the
+  `vault-k8s-ref-demo` namespace (see § Namespace isolation).
 - `eso.useVault` flag stays in the chart as a permanent migration toggle
   — useful for the ADR-0003 claim demonstration in future
   walkthroughs and for the case study.
+
+## Namespace isolation
+
+Discovered 2026-05-18 during the Phase 2.0 preflight: the homelab cluster
+already runs a **production Vault** at namespace `vault` (deployed
+2026-04-08, single-replica chart `hashicorp/vault@0.32.0` with HA-style
+values from a separate `HashiCorp-Vault` repo). That Vault is referenced
+by **12 `ExternalSecret`s** across `affiliate-yt`, `n8n-live`,
+`observability`, and `prod` namespaces via a pre-existing
+`vault-backend` `ClusterSecretStore`.
+
+Applying the original M2 manifests as drafted — Application name
+`vault`, destination namespace `vault` — would have:
+
+1. Overwritten the production ArgoCD Application spec (same name).
+2. Re-deployed dev-mode Vault (in-memory, root-token, no persistence)
+   into the same namespace, **destroying all production KV data** and
+   breaking 12 downstream consumers.
+3. Disabled the `vault-agent-injector` (running 63 days), severing any
+   injection-based consumers.
+
+Mitigation: every M2 resource is renamed and rescoped so the demo
+cannot collide with production state:
+
+| Resource | Production state (untouched) | M2 demo |
+|---|---|---|
+| ArgoCD Application | `vault` (multi-source, `hashicorp/vault@0.32.0`) | `vault-k8s-ref-demo` (single-source, `0.30.0` dev) |
+| Bootstrap Application | n/a | `vault-k8s-ref-demo-bootstrap` |
+| Namespace | `vault` | `vault-k8s-ref-demo` (CreateNamespace=true) |
+| Vault service DNS | `vault.vault.svc.cluster.local:8200` | `vault.vault-k8s-ref-demo.svc.cluster.local:8200` |
+| ClusterRoleBinding (cluster-scoped) | n/a | `vault-k8s-ref-demo-bootstrap-token-reviewer` (project-scoped name) |
+| `ClusterSecretStore` (cluster-scoped) | `vault-backend` (in use by 12 ES) | `k8s-ref-demo-vault-store` (project-scoped name) |
+
+Rollback (per `docs/runbooks/m2-apply.md` Tier 2) safely deletes the
+entire `vault-k8s-ref-demo` namespace without touching production —
+verified by the namespace-scoped destination and the project-scoped
+ClusterRoleBinding name. The two `ClusterSecretStore`s are
+cluster-scoped resources but use disjoint names so they coexist
+without collision.
+
+This refactor was driven by adversarial review against live cluster
+state, not theoretical risk. The original manifests (greenfield
+assumption) were unsafe for this homelab.
 
 ## Production migration path (for the case study)
 
@@ -117,9 +162,11 @@ The chart's Vault block already names the production knobs:
 - `eso.vault.role` → role bound to the appropriate workload SA in
   Vault.
 
-A production migration replaces the `vault` Application with an HA
-Vault chart and removes the `vault-bootstrap` Application — the
-ExternalSecret + ClusterSecretStore-vault resources stay byte-identical.
+A production migration replaces the `vault-k8s-ref-demo` Application
+with an HA Vault chart (or repoints `eso.vault.server` at the existing
+production `vault.vault.svc.cluster.local:8200`) and removes the
+`vault-k8s-ref-demo-bootstrap` Application — the ExternalSecret +
+ClusterSecretStore-vault resources stay byte-identical.
 
 ## Implementation summary
 
@@ -127,8 +174,8 @@ Files added/changed (commit landing this ADR):
 
 | File | Change |
 |---|---|
-| `argocd/apps/vault.yaml` | New — hashicorp/vault Application, dev mode, wave 0 |
-| `argocd/apps/vault-bootstrap.yaml` | New — vault-bootstrap Application, wave 1 |
+| `argocd/apps/vault.yaml` | New — `vault-k8s-ref-demo` Application, dev mode, wave 0, namespace `vault-k8s-ref-demo` |
+| `argocd/apps/vault-bootstrap.yaml` | New — `vault-k8s-ref-demo-bootstrap` Application, wave 1, namespace `vault-k8s-ref-demo` |
 | `helm/charts/vault-bootstrap/` | New — Chart.yaml, values.yaml, Job + SA + RBAC |
 | `helm/charts/k8s-ref-demo/templates/eso/cluster-secret-store-vault.yaml` | New — Vault ClusterSecretStore (gated on `useVault`) |
 | `helm/charts/k8s-ref-demo/templates/eso/cluster-secret-store.yaml` | Edit — gate render off when `useVault=true` |
@@ -160,7 +207,7 @@ Files added/changed (commit landing this ADR):
    ```
 6. Rotation demo:
    ```
-   kubectl exec -n vault vault-0 -- vault kv put secret/eso-source-config \
+   kubectl exec -n vault-k8s-ref-demo vault-0 -- vault kv put secret/eso-source-config \
      app-env=demo-vault-rotated feature-flags='...' log-level=debug
    kubectl annotate externalsecret -n k8s-ref-demo tenant-config \
      force-sync=$(date +%s) --overwrite

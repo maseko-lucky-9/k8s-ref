@@ -1,12 +1,15 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
+# Companion bootstrap to vault-k8s-ref-demo (see argocd/apps/vault.yaml).
+# Seeds policy + role + KV data into the namespace-isolated demo Vault only.
+# Will NOT touch the production Vault at namespace `vault`.
 metadata:
-  name: vault-bootstrap
+  name: vault-k8s-ref-demo-bootstrap
   namespace: argocd
   labels:
     app.kubernetes.io/part-of: k8s-ref
   annotations:
-    # Runs after vault Application (wave 0) finishes its first sync.
+    # Runs after vault-k8s-ref-demo Application (wave 0) finishes its first sync.
     argocd.argoproj.io/sync-wave: "1"
 spec:
   project: default
@@ -16,7 +19,7 @@ spec:
     path: helm/charts/vault-bootstrap
   destination:
     server: https://kubernetes.default.svc
-    namespace: vault
+    namespace: vault-k8s-ref-demo
   # The Job's status fields drift each run — ignore them so ArgoCD doesn't
   # flap to OutOfSync between hook executions.
   ignoreDifferences:

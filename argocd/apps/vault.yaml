@@ -1,12 +1,16 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
+# Namespace-isolated demo Vault for the k8s-ref portfolio M2 milestone.
+# DO NOT rename to `vault` — the homelab runs a production Vault at namespace
+# `vault` with 12 ExternalSecret consumers across affiliate-yt/n8n-live/
+# observability/prod. See ADR-0004 § Namespace isolation for rationale.
 metadata:
-  name: vault
+  name: vault-k8s-ref-demo
   namespace: argocd
   labels:
     app.kubernetes.io/part-of: k8s-ref
   annotations:
-    # Wave 0 — Vault must be Running before vault-bootstrap (wave 1) configures it.
+    # Wave 0 — Vault must be Running before vault-k8s-ref-demo-bootstrap (wave 1) configures it.
     argocd.argoproj.io/sync-wave: "0"
 spec:
   project: default
@@ -38,7 +42,7 @@ spec:
           serviceType: ClusterIP
   destination:
     server: https://kubernetes.default.svc
-    namespace: vault
+    namespace: vault-k8s-ref-demo
   syncPolicy:
     automated:
       prune: false

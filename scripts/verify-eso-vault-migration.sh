@@ -15,9 +15,15 @@
 #   F. Rotation roundtrip: write new value in Vault → force ESO sync →
 #      confirm K8s Secret updated to new value within 30s.
 #
-# Prereqs:
-#   ssh -L 16443:127.0.0.1:16443 -N homelab-tunnel
-#   export KUBECONFIG=$HOME/.kube/config-homelab
+# Prereqs (pick ONE of two transports — homelab API cert SAN includes both):
+#
+#   Option A: Tailscale-direct (no SSH tunnel needed) —
+#     export KUBECONFIG=$HOME/.kube/config-homelab-ts
+#     (config-homelab-ts points server: at https://100.114.75.127:16443)
+#
+#   Option B: SSH tunnel (legacy) —
+#     ssh -L 16443:127.0.0.1:16443 -N homelab-tunnel
+#     export KUBECONFIG=$HOME/.kube/config-homelab
 #
 # Usage:
 #   ./scripts/verify-eso-vault-migration.sh             # full check incl. rotation
@@ -38,8 +44,8 @@ fail() { printf '\033[31mFAIL\033[0m %s\n' "$*" >&2; exit 1; }
 note() { printf '  %s\n' "$*"; }
 
 # -- A. ArgoCD Applications Synced + Healthy --
-echo "[A] ArgoCD vault + vault-bootstrap Applications…"
-for app in vault vault-bootstrap; do
+echo "[A] ArgoCD vault-k8s-ref-demo + vault-k8s-ref-demo-bootstrap Applications…"
+for app in vault-k8s-ref-demo vault-k8s-ref-demo-bootstrap; do
   state=$(kubectl get application -n argocd "$app" \
             -o jsonpath='{.status.sync.status}/{.status.health.status}' 2>/dev/null \
           || echo "NotFound")
@@ -50,8 +56,8 @@ for app in vault vault-bootstrap; do
 done
 
 # -- B. Bootstrap Job completed --
-echo "[B] vault-bootstrap Job…"
-status=$(kubectl get job -n vault vault-bootstrap-config \
+echo "[B] vault-bootstrap Job (in namespace vault-k8s-ref-demo)…"
+status=$(kubectl get job -n vault-k8s-ref-demo vault-bootstrap-config \
            -o jsonpath='{.status.conditions[?(@.type=="Complete")].status}' 2>/dev/null \
          || echo "")
 if [[ "$status" != "True" ]]; then
@@ -103,10 +109,10 @@ if $NO_ROTATE; then
   exit 0
 fi
 
-echo "[F] Rotation roundtrip (Vault → ESO → K8s Secret)…"
+echo "[F] Rotation roundtrip (demo Vault → ESO → K8s Secret)…"
 new_value="rotated-$(date +%s)"
-note "Writing '$new_value' to secret/eso-source-config in Vault…"
-kubectl exec -n vault vault-0 -- sh -c \
+note "Writing '$new_value' to secret/eso-source-config in demo Vault…"
+kubectl exec -n vault-k8s-ref-demo vault-0 -- sh -c \
   "VAULT_TOKEN=root vault kv put secret/eso-source-config \
      app-env='$new_value' \
      feature-flags='rotation-test=true' \

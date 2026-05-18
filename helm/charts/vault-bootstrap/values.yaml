@@ -1,7 +1,9 @@
 # yaml-language-server: $schema=values.schema.json
 
-# Namespace where Vault is deployed (matches argocd/apps/vault.yaml destination.namespace).
-vaultNamespace: vault
+# Namespace where the *demo* Vault is deployed (matches argocd/apps/vault.yaml
+# destination.namespace). Isolated from the homelab's production Vault at
+# namespace `vault` — see ADR-0004 § Namespace isolation.
+vaultNamespace: vault-k8s-ref-demo
 
 # Vault dev-mode root token (must match server.dev.devRootToken in vault Application).
 # Dev-only — see ADR-0004. Production migration would use a different auth model.
