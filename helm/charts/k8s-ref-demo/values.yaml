@@ -45,7 +45,7 @@ eso:
   # `vault-bootstrap` Applications synced first (see argocd/apps/vault*.yaml).
   # Migration is gradual — both stores can coexist while flipping; remove
   # cluster-secret-store.yaml in a follow-up commit after verifying.
-  useVault: false
+  useVault: true   # M2 cutover 2026-05-18 — see ADR-0004
   vault:
     # In-cluster *demo* Vault service URL (set by argocd/apps/vault.yaml deploy).
     # Service name = Helm release name of upstream hashicorp/vault chart, which
