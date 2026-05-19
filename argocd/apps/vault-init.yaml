@@ -1,0 +1,28 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+# One-shot init + auto-unseal Job for the prod-mode demo Vault (M3, ADR-0005).
+# Sync hook at wave 0 — runs as soon as the Vault pod is reachable but BEFORE
+# vault-k8s-ref-demo-bootstrap (wave 1) tries to write auth/kv config.
+metadata:
+  name: vault-k8s-ref-demo-init
+  namespace: argocd
+  labels:
+    app.kubernetes.io/part-of: k8s-ref
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/maseko-lucky-9/k8s-ref
+    targetRevision: HEAD
+    path: helm/charts/vault-init
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: vault-k8s-ref-demo
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: false
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true

@@ -1,0 +1,6 @@
+apiVersion: v2
+name: vault-init
+description: One-shot Job that initialises a fresh prod-mode Vault (Shamir 1-of-1) and unseals it on every sync.
+type: application
+version: 0.1.0
+appVersion: "1.0"

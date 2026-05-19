@@ -29,18 +29,40 @@ spec:
       # k8s-ref-demo ClusterSecretStore) template the service DNS off
       # this release name.
       valuesObject:
-        # Dev mode: single in-memory unsealed Vault. NOT production — ADR-0004 documents posture.
+        # Prod-shape Vault for the demo (M3, ADR-0005). Raft + PVC + Shamir
+        # unseal (1-of-1, key stored in K8s Secret vault-init-keys by the
+        # vault-init chart). Single replica because this is a single-node
+        # MicroK8s homelab — Raft still functions, persistence still works,
+        # the only thing 3 replicas would add is replication theatre. Flip
+        # to 3 for the EKS recipe (future).
         server:
           dev:
-            enabled: true
-            devRootToken: "root"
+            enabled: false
           standalone:
             enabled: false
           ha:
-            enabled: false
+            enabled: true
+            replicas: 1
+            raft:
+              enabled: true
+              setNodeId: true
+              config: |
+                ui = true
+                listener "tcp" {
+                  tls_disable = 1
+                  address = "[::]:8200"
+                  cluster_address = "[::]:8201"
+                }
+                storage "raft" {
+                  path = "/vault/data"
+                }
+                service_registration "kubernetes" {}
           dataStorage:
+            enabled: true
+            size: 10Gi
+            storageClass: microk8s-hostpath
+          auditStorage:
             enabled: false
-          # Surface a stable service for ESO + bootstrap to reach.
           service:
             enabled: true
         injector:

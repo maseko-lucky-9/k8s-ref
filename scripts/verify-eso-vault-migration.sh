@@ -1,5 +1,9 @@
 #!/usr/bin/env bash
-# Verifies the Slice 4 / M2 ESO → Vault migration end-to-end.
+# Verifies the ESO → Vault migration end-to-end (M2 dev-mode and M3 prod-mode
+# both pass the same 6 checks: CSS Valid, ExternalSecret SecretSynced, K8s
+# Secret materialised, rotation roundtrip propagates within one refresh).
+# Vault-shape agnostic — works against dev (inmem, hardcoded root token) and
+# prod (Raft, Shamir-unsealed, generated root token from vault-init-keys).
 #
 # Run this after:
 #   1. Applying argocd/apps/vault.yaml + argocd/apps/vault-bootstrap.yaml
@@ -112,8 +116,18 @@ fi
 echo "[F] Rotation roundtrip (demo Vault → ESO → K8s Secret)…"
 new_value="rotated-$(date +%s)"
 note "Writing '$new_value' to secret/eso-source-config in demo Vault…"
+
+# Root token: post-M3 (ADR-0005) Vault is initialised with a generated root
+# token stored in vault-init-keys Secret. Read it here so the rotation step
+# works against both dev-mode (`root`) and prod-mode (generated) Vault.
+# Falls back to "root" if the Secret is missing — useful for any cluster
+# still on dev-mode (M2 era) where the new Secret hasn't been created yet.
+root_token=$(kubectl get secret -n vault-k8s-ref-demo vault-init-keys \
+               -o jsonpath='{.data.root-token}' 2>/dev/null | base64 -d || true)
+root_token="${root_token:-root}"
+
 kubectl exec -n vault-k8s-ref-demo vault-k8s-ref-demo-0 -- sh -c \
-  "VAULT_TOKEN=root vault kv put secret/eso-source-config \
+  "VAULT_TOKEN='$root_token' vault kv put secret/eso-source-config \
      app-env='$new_value' \
      feature-flags='rotation-test=true' \
      log-level=debug" >/dev/null

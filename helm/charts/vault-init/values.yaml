@@ -1,0 +1,22 @@
+# Namespace where the prod-mode Vault is running.
+vaultNamespace: vault-k8s-ref-demo
+
+# Service name for the Vault pod (matches the ArgoCD Application name +
+# Helm release name of the upstream hashicorp/vault chart).
+vaultServiceName: vault-k8s-ref-demo
+
+# Secret to write the unseal key + root token into (created if missing).
+# Anyone with `get secret` on this name in this namespace can fully control
+# Vault — RBAC accordingly. ADR-0005 acknowledges the trade-off.
+keysSecret: vault-init-keys
+
+# Shamir scheme. 1-of-1 is the single-operator homelab default; bump for
+# multi-operator scenarios.
+shamir:
+  shares: 1
+  threshold: 1
+
+image:
+  repository: hashicorp/vault
+  tag: "1.19.0"
+  pullPolicy: IfNotPresent

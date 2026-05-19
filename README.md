@@ -121,6 +121,7 @@ Non-trivial decisions are documented before implementation. Michael Nygard forma
 | [0002](docs/decisions/0002-homelab-distribution-microk8s-vs-k3s-vs-kind.md) | Homelab distribution: MicroK8s vs k3s vs kind | Accepted |
 | [0003](docs/decisions/0003-secret-management-eso-vs-sealed-secrets.md) | Secret management: ESO vs Sealed Secrets | Accepted |
 | [0004](docs/decisions/0004-vault-dev-mode-for-eso-migration.md) | Vault dev-mode for ESO migration | Proposed (promote after M2 apply) |
+| [0005](docs/decisions/0005-vault-prod-mode-and-shamir-unseal-for-demo.md) | Vault prod-mode (Raft + Shamir) for the demo | Proposed (promote after M3 migration) |
 | [0006](docs/decisions/0006-progressive-delivery-argo-rollouts.md) | Progressive delivery via Argo Rollouts | Accepted (canary verified end-to-end 2026-05-18) |
 
 ## License

@@ -1,0 +1,113 @@
+# Idempotent init + unseal Job — runs on every ArgoCD sync as a hook.
+# Replay-safe: branches on the current Vault state.
+#   - If uninitialised: vault operator init → store keys in Secret.
+#   - If sealed:        read Secret → vault operator unseal.
+#   - If unsealed:      noop.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: vault-init
+  namespace: {{ .Values.vaultNamespace }}
+  labels:
+    {{- include "vault-init.labels" . | nindent 4 }}
+  annotations:
+    # Wave 0 — runs as soon as the Vault pod is reachable, before the
+    # vault-bootstrap chart (wave 1) tries to write auth/kv config.
+    argocd.argoproj.io/sync-wave: "0"
+    argocd.argoproj.io/hook: Sync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+spec:
+  backoffLimit: 5
+  ttlSecondsAfterFinished: 600
+  template:
+    metadata:
+      labels:
+        {{- include "vault-init.labels" . | nindent 8 }}
+    spec:
+      serviceAccountName: vault-init
+      restartPolicy: OnFailure
+      containers:
+        - name: init
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          env:
+            - name: VAULT_ADDR
+              value: "http://{{ .Values.vaultServiceName }}.{{ .Values.vaultNamespace }}.svc.cluster.local:8200"
+            - name: KEYS_SECRET
+              value: "{{ .Values.keysSecret }}"
+            - name: SHAMIR_SHARES
+              value: "{{ .Values.shamir.shares }}"
+            - name: SHAMIR_THRESHOLD
+              value: "{{ .Values.shamir.threshold }}"
+            - name: NAMESPACE
+              value: "{{ .Values.vaultNamespace }}"
+          command:
+            - /bin/sh
+            - -c
+            - |
+              set -eu
+
+              # Install kubectl into the container so we can read/write the keys Secret.
+              # The Vault image ships with curl + sh; we fetch kubectl from a known mirror.
+              echo "[vault-init] preparing tools…"
+              apk add --no-cache curl jq >/dev/null 2>&1 || true
+              if ! command -v kubectl >/dev/null 2>&1; then
+                KUBE_VER=$(curl -sL https://dl.k8s.io/release/stable.txt)
+                curl -sL "https://dl.k8s.io/release/${KUBE_VER}/bin/linux/amd64/kubectl" -o /tmp/kubectl
+                chmod +x /tmp/kubectl
+                export PATH="/tmp:$PATH"
+              fi
+
+              echo "[vault-init] waiting for Vault to become reachable at $VAULT_ADDR…"
+              for i in $(seq 1 30); do
+                if curl -sf "${VAULT_ADDR}/v1/sys/health?standbyok=true&sealedcode=200&uninitcode=200" >/dev/null; then
+                  break
+                fi
+                sleep 2
+              done
+
+              # Pull health JSON
+              HEALTH=$(curl -sf "${VAULT_ADDR}/v1/sys/health?standbyok=true&sealedcode=200&uninitcode=200")
+              INITIALIZED=$(echo "$HEALTH" | jq -r .initialized)
+              SEALED=$(echo "$HEALTH" | jq -r .sealed)
+              echo "[vault-init] state: initialized=$INITIALIZED sealed=$SEALED"
+
+              # --- BRANCH A: needs init ---
+              if [ "$INITIALIZED" = "false" ]; then
+                echo "[vault-init] running operator init (shares=$SHAMIR_SHARES threshold=$SHAMIR_THRESHOLD)…"
+                INIT=$(curl -sf -X POST \
+                  -d "{\"secret_shares\":$SHAMIR_SHARES,\"secret_threshold\":$SHAMIR_THRESHOLD}" \
+                  "${VAULT_ADDR}/v1/sys/init")
+                UNSEAL_KEY=$(echo "$INIT" | jq -r '.keys_base64[0]')
+                ROOT_TOKEN=$(echo "$INIT" | jq -r '.root_token')
+
+                echo "[vault-init] storing keys in Secret ${KEYS_SECRET}…"
+                # kubectl create secret with --dry-run + apply makes this idempotent.
+                kubectl -n "$NAMESPACE" create secret generic "$KEYS_SECRET" \
+                  --from-literal=unseal-key="$UNSEAL_KEY" \
+                  --from-literal=root-token="$ROOT_TOKEN" \
+                  --dry-run=client -o yaml | kubectl apply -f -
+
+                # Re-pull health (Vault is now sealed=true post-init).
+                HEALTH=$(curl -sf "${VAULT_ADDR}/v1/sys/health?standbyok=true&sealedcode=200&uninitcode=200")
+                SEALED=$(echo "$HEALTH" | jq -r .sealed)
+                echo "[vault-init] post-init: sealed=$SEALED"
+              fi
+
+              # --- BRANCH B: needs unseal ---
+              if [ "$SEALED" = "true" ]; then
+                echo "[vault-init] reading unseal key from Secret ${KEYS_SECRET}…"
+                UNSEAL_KEY=$(kubectl -n "$NAMESPACE" get secret "$KEYS_SECRET" -o jsonpath='{.data.unseal-key}' | base64 -d)
+                if [ -z "$UNSEAL_KEY" ]; then
+                  echo "[vault-init] ERROR: keys Secret has no unseal-key — bail" >&2
+                  exit 1
+                fi
+                echo "[vault-init] unsealing…"
+                curl -sf -X POST \
+                  -d "{\"key\":\"$UNSEAL_KEY\"}" \
+                  "${VAULT_ADDR}/v1/sys/unseal" | jq -r '"sealed=\(.sealed) progress=\(.progress)"'
+              fi
+
+              echo "[vault-init] final state:"
+              curl -sf "${VAULT_ADDR}/v1/sys/health?standbyok=true" | jq .
+              echo "[vault-init] done."
