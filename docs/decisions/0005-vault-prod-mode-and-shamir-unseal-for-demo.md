@@ -4,7 +4,11 @@ Date: 2026-05-18
 
 ## Status
 
-**Proposed** — promote to **Accepted** after a clean migration from the dev-mode demo Vault to a prod-shaped (HA chart + Raft storage + Shamir unseal) demo Vault on the homelab cluster, with ESO `ClusterSecretStore` returning to `Valid` and the `tenant-config` `ExternalSecret` resyncing successfully.
+**Accepted** (2026-06-04) — migration executed on the homelab cluster.
+
+**Consequences confirmed:** the demo Vault moved from dev-mode (`inmem`, root token `root`, auto-unseal) to prod-shape (HA chart + Raft storage + 10Gi PVC + Shamir 1-of-1 unseal, init keys in K8s Secret `vault-init-keys`). The ESO `ClusterSecretStore` `k8s-ref-demo-vault-store` returned to `Valid` and the `tenant-config` `ExternalSecret` resynced (`SecretSynced`); `verify-eso-vault-migration.sh --no-rotate` passed checks A–E. Two defects surfaced and were fixed during the migration:
+- the bootstrap Job did not enable the `secret/` KV-v2 engine that a freshly-initialised Raft Vault lacks (dev-mode auto-mounts it) — fixed in PR #5;
+- the `vault-k8s-ref-demo` Application was perpetually `OutOfSync` on the immutable StatefulSet `volumeClaimTemplates` (API-defaulted `volumeMode`/`status`) — fixed with `ignoreDifferences` in PR #6.
 
 ## Context
 
