@@ -94,6 +94,14 @@ spec:
                 token_reviewer_jwt=@/var/run/vault-bootstrap-token/token \
                 disable_iss_validation=true
 
+              echo "[bootstrap] ensuring KV v2 secrets engine at ${KV_MOUNT}/ …"
+              # A freshly-initialised Raft Vault has no default secret/ mount (that
+              # is a dev-mode convenience), so enable it idempotently. Without this
+              # the seed below and the ESO read path return 403 in prod-mode.
+              if ! vault secrets list -format=json | grep -q "\"${KV_MOUNT}/\""; then
+                vault secrets enable -path="${KV_MOUNT}" kv-v2
+              fi
+
               echo "[bootstrap] writing policy ${POLICY_NAME}…"
               vault policy write "${POLICY_NAME}" - <<EOF
               path "${KV_MOUNT}/data/${SECRET_PATH}" {
