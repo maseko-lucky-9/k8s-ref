@@ -81,3 +81,15 @@ spec:
     syncOptions:
       - CreateNamespace=true
       - ServerSideApply=true
+  ignoreDifferences:
+    # The StatefulSet's volumeClaimTemplates is immutable, and the API server
+    # defaults apiVersion/kind/volumeMode/status onto it after creation. ArgoCD
+    # cannot reconcile an immutable field, so without this the App is perpetually
+    # OutOfSync once Raft + PVC are in play (M3/ADR-0005). Same for the
+    # API-defaulted persistentVolumeClaimRetentionPolicy.
+    - group: apps
+      kind: StatefulSet
+      name: vault-k8s-ref-demo
+      jsonPointers:
+        - /spec/volumeClaimTemplates
+        - /spec/persistentVolumeClaimRetentionPolicy
