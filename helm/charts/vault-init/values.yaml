@@ -20,3 +20,20 @@ image:
   repository: hashicorp/vault
   tag: "1.19.0"
   pullPolicy: IfNotPresent
+
+# Always-on unseal watcher (INTERIM WORKAROUND — see deployment-unsealer.yaml /
+# plan A4). Re-unseals the Shamir-sealed Vault after ANY pod restart, decoupled
+# from ArgoCD sync. The init Job (above) still handles first-install init+unseal;
+# this watcher only unseals an already-initialised, sealed Vault.
+unsealer:
+  enabled: true
+  # How often to poll `vault status`. 15s ⇒ worst-case ~15s sealed window.
+  intervalSeconds: 15
+  # Guaranteed QoS (requests == limits) so the watcher is not first-evicted under
+  # node pressure — the failure mode it exists to recover from.
+  resources:
+    cpu: 10m
+    memory: 32Mi
+  # Optional: a non-zero PriorityClass to further protect the watcher from
+  # preemption/eviction (leave empty to use the namespace default).
+  priorityClassName: ""

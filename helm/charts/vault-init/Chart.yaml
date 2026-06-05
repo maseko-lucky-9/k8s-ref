@@ -1,6 +1,6 @@
 apiVersion: v2
 name: vault-init
-description: One-shot Job that initialises a fresh prod-mode Vault (Shamir 1-of-1) and unseals it on every sync.
+description: Initialises a fresh prod-mode Vault (Shamir 1-of-1) via a Sync-hook Job, plus an always-on watcher Deployment that re-unseals it after any restart (decoupled from ArgoCD sync).
 type: application
-version: 0.1.0
-appVersion: "1.0"
+version: 0.2.0
+appVersion: "1.1"
