@@ -92,12 +92,22 @@ spec:
                 else
                   code=$?
                   if [ "$code" = "2" ]; then
-                    echo "[unsealer] $(date -u +%FT%TZ) Vault SEALED — submitting unseal"
-                    if vault operator unseal - < "$KEY_FILE" >/dev/null 2>&1; then
-                      echo "[unsealer] $(date -u +%FT%TZ) unseal submitted OK"
+                    echo "[unsealer] $(date -u +%FT%TZ) Vault SEALED — submitting unseal via API"
+                    # The vault CLI's `operator unseal` has NO stdin form in 1.19.0
+                    # (`-` is treated as a literal key → 400), so POST to the
+                    # in-cluster unseal API with busybox wget. Build the body WITHOUT
+                    # the key ever on argv: cat streams the key file into the body;
+                    # printf writes only the JSON wrapper. No egress (in-cluster), no
+                    # argv exposure. Body lives on the /tmp emptyDir (in-memory).
+                    ( umask 077; { printf '{"key":"'; cat "$KEY_FILE"; printf '"}'; } > /tmp/unseal-body )
+                    if wget -q -T 5 -O- --header='Content-Type: application/json' \
+                         --post-file=/tmp/unseal-body "$VAULT_ADDR/v1/sys/unseal" 2>/dev/null \
+                         | grep -q '"sealed":false'; then
+                      echo "[unsealer] $(date -u +%FT%TZ) unseal OK (sealed=false)"
                     else
-                      echo "[unsealer] $(date -u +%FT%TZ) WARN unseal call failed — will retry"
+                      echo "[unsealer] $(date -u +%FT%TZ) WARN unseal not confirmed — will retry"
                     fi
+                    rm -f /tmp/unseal-body
                   else
                     echo "[unsealer] $(date -u +%FT%TZ) Vault unreachable (code=$code) — will retry"
                   fi
