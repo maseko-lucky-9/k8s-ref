@@ -1,0 +1,170 @@
+{{- if .Values.unsealer.enabled }}
+# =============================================================================
+# Vault unseal watcher — INTERIM WORKAROUND (see plan A4 / ADR-0005 follow-up).
+#
+# WHY: vault-k8s-ref-demo uses Shamir manual seal. Unseal otherwise happens ONLY
+# via the vault-init ArgoCD Sync-hook Job, which fires on a sync op — NOT on a
+# bare pod restart (the init app does not selfHeal, and a restart is neither a
+# git change nor manifest drift). So a restart leaves Vault sealed until the next
+# manual sync → ESO ClusterSecretStore goes InvalidProviderConfig and secrets
+# stop syncing. This always-on watcher closes that gap, decoupled from ArgoCD.
+#
+# DESIGN (hardened against adversarial review — see plan critiques #1/#3):
+#   * Uses the `vault` binary ALREADY in the image — no kubectl, no apk, NO egress
+#     (the previous CronJob idea downloaded kubectl from the internet every run,
+#     which would fail in the exact DNS/egress blip it exists to cover).
+#   * Mounts the unseal-key Secret as a READ-ONLY volume — kubelet decodes it to a
+#     file, so NO Kubernetes API call and NO RBAC are needed to read the key.
+#   * Feeds the key to `vault operator unseal -` via STDIN, never on argv (/proc-safe).
+#   * Guaranteed QoS (requests == limits) so it is not first-evicted under the
+#     node pressure it is meant to guard against.
+#   * Heartbeats to a file + liveness probe so a wedged loop self-heals (and a
+#     future PrometheusRule can dead-man's-switch on it — plan Part E).
+#
+# CANONICAL FIX (deferred): transit auto-unseal against the prod Vault. Upgrade
+# trigger: adopt transit when k8s-ref graduates beyond demo, or if unseal-watcher
+# failures exceed a threshold/week. Trade-off: transit couples this demo Vault's
+# availability to the prod Vault (contra ADR-0004 namespace isolation) + needs a
+# one-time `operator unseal -migrate`.
+#
+# NOTE (single replica): unseals the active pod via the Service — correct for the
+# 1-replica Raft StatefulSet here. The 3-replica EKS recipe needs per-pod unseal.
+# =============================================================================
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: vault-unsealer
+  namespace: {{ .Values.vaultNamespace }}
+  labels:
+    {{- include "vault-init.labels" . | nindent 4 }}
+    app.kubernetes.io/component: unsealer
+# The watcher reads the key from a mounted volume, not the API — it needs NO token.
+automountServiceAccountToken: false
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vault-unsealer
+  namespace: {{ .Values.vaultNamespace }}
+  labels:
+    {{- include "vault-init.labels" . | nindent 4 }}
+    app.kubernetes.io/component: unsealer
+spec:
+  replicas: 1
+  # Recreate (not RollingUpdate): only ever one watcher; avoids two loops racing
+  # unseal during a rollout.
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: vault-init
+      app.kubernetes.io/component: unsealer
+  template:
+    metadata:
+      labels:
+        {{- include "vault-init.labels" . | nindent 8 }}
+        app.kubernetes.io/component: unsealer
+    spec:
+      serviceAccountName: vault-unsealer
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 100      # `vault` user in the hashicorp/vault image
+        runAsGroup: 1000
+        fsGroup: 1000       # so the mounted key file is group-readable by uid 100
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: unsealer
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command: ["/bin/sh", "-ec"]
+          args:
+            - |
+              echo "[unsealer] start: interval=${INTERVAL}s addr=$VAULT_ADDR"
+              while true; do
+                # Atomic heartbeat (write-then-rename) so the liveness probe never
+                # reads a half-written/empty file mid-truncate.
+                date +%s > /tmp/heartbeat.tmp && mv /tmp/heartbeat.tmp /tmp/heartbeat
+                # `vault status` exit codes: 0=unsealed, 2=sealed, 1=error/unreachable
+                if vault status >/dev/null 2>&1; then
+                  :   # unsealed — nothing to do
+                else
+                  code=$?
+                  if [ "$code" = "2" ]; then
+                    echo "[unsealer] $(date -u +%FT%TZ) Vault SEALED — submitting unseal"
+                    if vault operator unseal - < "$KEY_FILE" >/dev/null 2>&1; then
+                      echo "[unsealer] $(date -u +%FT%TZ) unseal submitted OK"
+                    else
+                      echo "[unsealer] $(date -u +%FT%TZ) WARN unseal call failed — will retry"
+                    fi
+                  else
+                    echo "[unsealer] $(date -u +%FT%TZ) Vault unreachable (code=$code) — will retry"
+                  fi
+                fi
+                sleep "$INTERVAL"
+              done
+          env:
+            - name: VAULT_ADDR
+              value: "http://{{ .Values.vaultServiceName }}.{{ .Values.vaultNamespace }}.svc.cluster.local:8200"
+            # Fail FAST: on a network blackhole (e.g. the known Calico/eBPF veth DROP
+            # after a node reboot — packets dropped, no RST) the CLI's default 60s
+            # timeout ×retries would block the loop and starve the heartbeat, getting
+            # the watcher liveness-killed during the exact outage it must survive.
+            - name: VAULT_CLIENT_TIMEOUT
+              value: "5"
+            - name: VAULT_MAX_RETRIES
+              value: "0"
+            - name: KEY_FILE
+              value: /vault/keys/unseal-key
+            - name: INTERVAL
+              value: "{{ .Values.unsealer.intervalSeconds }}"
+            - name: HOME
+              value: /tmp
+          resources:
+            # Guaranteed QoS: requests == limits.
+            requests:
+              cpu: {{ .Values.unsealer.resources.cpu | quote }}
+              memory: {{ .Values.unsealer.resources.memory | quote }}
+            limits:
+              cpu: {{ .Values.unsealer.resources.cpu | quote }}
+              memory: {{ .Values.unsealer.resources.memory | quote }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          livenessProbe:
+            # Loop is alive iff the heartbeat is fresh (< 4x interval).
+            exec:
+              command:
+                - /bin/sh
+                - -c
+                - test $(( $(date +%s) - $(cat /tmp/heartbeat 2>/dev/null || echo 0) )) -lt {{ mul .Values.unsealer.intervalSeconds 4 }}
+            initialDelaySeconds: {{ add .Values.unsealer.intervalSeconds 10 }}
+            periodSeconds: {{ .Values.unsealer.intervalSeconds }}
+            failureThreshold: 3
+          volumeMounts:
+            - name: unseal-key
+              mountPath: /vault/keys
+              readOnly: true
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: unseal-key
+          secret:
+            secretName: {{ .Values.keysSecret }}
+            items:
+              - key: unseal-key
+                path: unseal-key
+            # 0440 (owner+group read): secret-volume files are owned root:fsGroup,
+            # and the container runs as uid 100 / fsGroup 1000 — it reads via the
+            # group bit. 0400 (owner-only) would make the key unreadable to uid 100.
+            defaultMode: 0440
+            optional: false
+        - name: tmp
+          emptyDir: {}
+      {{- with .Values.unsealer.priorityClassName }}
+      priorityClassName: {{ . }}
+      {{- end }}
+{{- end }}
