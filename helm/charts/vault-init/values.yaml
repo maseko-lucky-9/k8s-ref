@@ -31,9 +31,13 @@ unsealer:
   intervalSeconds: 15
   # Guaranteed QoS (requests == limits) so the watcher is not first-evicted under
   # node pressure — the failure mode it exists to recover from.
+  # NOTE: idle RSS is ~5Mi, but each `vault` CLI invocation (Go runtime) spikes
+  # well past 32Mi — verified OOMKilled at 32Mi. 128Mi gives ~3x headroom so an
+  # OOM never kills the watcher mid-unseal. CPU is compressible; 50m keeps the
+  # status/unseal calls (and the heartbeat cadence) snappy.
   resources:
-    cpu: 10m
-    memory: 32Mi
+    cpu: 50m
+    memory: 128Mi
   # Optional: a non-zero PriorityClass to further protect the watcher from
   # preemption/eviction (leave empty to use the namespace default).
   priorityClassName: ""
